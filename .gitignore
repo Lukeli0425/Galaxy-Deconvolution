@@ -1,6 +1,6 @@
 # Large data
-./data
-./dataset
+./data/
+./dataset/
 
 # Vscode setting
 .vscode/
