@@ -62,4 +62,4 @@ def train_p4ip( n_epochs=10, n_iters=8, lr=1e-4, train_test_split=0.7, batch_siz
     return
 
 if __name__ =="__main__":
-    train_p4ip(load_pretrain=True, pretrained_file='./poisson-deblurring/model_zoo/p4ip_100epoch.pth')
+    train_p4ip(load_pretrain=True, pretrained_file='./saved_models/p4ip_100epoch.pth')
