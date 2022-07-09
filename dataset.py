@@ -70,13 +70,13 @@ class Galaxy_Dataset(Dataset):
             self.info = {'I':I, 'img_size':img_size, 'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'pixel_scale':pixel_scale, 'seeing':seeing}
             # Generate random sequence for data
             logging.warning(f'Failed reading information from {self.info_file}.')
-            sequence = [i for i in range(self.n_total)]
-            np.random.shuffle(sequence)
+            self.sequence = [i for i in range(self.n_total)]
+            np.random.shuffle(self.sequence)
             n_train = int(self.train_split * self.n_total)
             self.info['n_total'] = self.n_total
             self.info['n_train'] = n_train
             self.info['n_test'] = self.real_galaxy_catalog.nobjects - n_train
-            self.info['sequence'] = sequence
+            self.info['sequence'] = self.sequence
             with open(self.info_file, 'w') as f:
                 json.dump(self.info, f)
             logging.info(f'Successfully created {self.info_file}.')
