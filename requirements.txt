@@ -12,4 +12,3 @@ PILLOW
 bm3d
 galsim
 astropy
-astroNN
