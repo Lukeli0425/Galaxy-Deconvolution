@@ -5,6 +5,7 @@ import numpy as np
 from skimage import io
 import torch
 from torch.utils.data import Dataset
+from torch.utils.data import DataLoader, random_split
 import matplotlib.pyplot as plt
 import galsim
 from utils import PSNR
@@ -211,6 +212,16 @@ class Galaxy_Dataset(Dataset):
 
         return (obs, psf, M), gt
 
+def get_dataloader(train_test_split=0.7, batch_size=1):
+    """Create dataloaders from Galaxy Dataset."""
+    full_dataset = Galaxy_Dataset(train=True)
+    train_size = int(train_test_split * len(full_dataset))
+    test_size = len(full_dataset) - train_size
+    train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    return train_loader, test_loader
 
 if __name__ == "__main__":
     dataset = Galaxy_Dataset(I=23.5)
