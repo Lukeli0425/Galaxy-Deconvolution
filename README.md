@@ -5,7 +5,7 @@ To clone this project, run:
 git clone https://github.com/Lukeli0425/Galaxy-Deconvolution.git
 ```
 
-## Download COSMOS Data
+## Download [COSMOS Real Galaxy Dataset](https://zenodo.org/record/3242143#.Ysmezi-KFQJ)
 
 Create a `data` folder under the root directory:
 ```zsh
