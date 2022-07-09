@@ -5,7 +5,7 @@ To clone this project, run:
 git clone https://github.com/Lukeli0425/Galaxy-Deconvolution.git
 ```
 
-## Environment 
+## Environment
 
 To create a virtual environment to run this project, run:
 ```zsh
