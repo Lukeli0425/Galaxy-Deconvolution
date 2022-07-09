@@ -4,7 +4,6 @@ scipy
 pandas
 torch
 torchvision
-pytorch_ssim
 scikit-learn
 scikit-image
 opencv-python
