@@ -87,7 +87,8 @@ class Galaxy_Dataset(Dataset):
         logging.info('Simulating real galaxy images.')
         random_seed = 425879
         psnr_list = []
-        for k in self.sequence:
+        for k in range(self.n_total):
+            idx = self.sequence[k] # index pf galaxy in the catalog
             # Galaxy parameters 
             rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
             sky_level = 2.5e4                   # ADU / arcsec^2
@@ -118,10 +119,10 @@ class Galaxy_Dataset(Dataset):
             tel_diam = 8.36                     # telescope diameter / meters (8.36 for LSST)
 
             # Read out real galaxy from catalog
-            gal_ori = galsim.RealGalaxy(self.real_galaxy_catalog, index = k, flux = gal_flux)
-            psf_ori = self.real_galaxy_catalog.getPSF(i=k)
-            gal_ori_image = self.real_galaxy_catalog.getGalImage(k)
-            psf_ori_image = self.real_galaxy_catalog.getPSFImage(k)
+            gal_ori = galsim.RealGalaxy(self.real_galaxy_catalog, index = idx, flux = gal_flux)
+            psf_ori = self.real_galaxy_catalog.getPSF(i=idx)
+            gal_ori_image = self.real_galaxy_catalog.getGalImage(idx)
+            psf_ori_image = self.real_galaxy_catalog.getPSFImage(idx)
 
             gal_ori = galsim.Convolve([psf_ori, gal_ori]) # concolve wth original PSF of HST
             gal = gal_ori.rotate(theta * galsim.radians) # Rotate by a random angle
