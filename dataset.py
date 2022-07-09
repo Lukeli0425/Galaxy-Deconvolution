@@ -13,7 +13,7 @@ class Galaxy_Dataset(Dataset):
     """A galaxy image dataset generated with Galsim."""
     def __init__(self,  train=True, data_path='./dataset/', train_split = 0.7,
                         COSMOS_path='./data/', I=23.5, img_size=(48,48),
-                        method = 'auto', gal_max_shear=0.5, atmos_max_shear=0.2, 
+                        gal_max_shear=0.5, atmos_max_shear=0.2, 
                         pixel_scale=0.2, seeing=0.7):
         # Initialize parameters
         self.train= train # Using train data or test data
@@ -27,7 +27,6 @@ class Galaxy_Dataset(Dataset):
 
         self.I = I # I = 23.5 or 25.2 COSMOS data
         self.img_size = img_size
-        self.method = method
         self.gal_max_shear = gal_max_shear
         self.atmos_max_shear = atmos_max_shear
         self.pixel_scale = pixel_scale # arcsec
@@ -66,14 +65,18 @@ class Galaxy_Dataset(Dataset):
             self.n_test = self.info['n_test']
             self.sequence = self.info['sequence']
         except:
+            self.info = {'I':I, 'img_size':img_size, 'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'pixel_scale':pixel_scale, 'seeing':seeing}
             # Generate random sequence for data
             logging.warning(f'Failed reading information from {self.info_file}.')
             sequence = [i for i in range(self.n_total)]
             np.random.shuffle(sequence)
             n_train = int(self.train_split * self.n_total)
-            self.dict = {'n_total':self.n_total, 'n_train':n_train, 'n_test':self.real_galaxy_catalog.nobjects-n_train, 'sequence':sequence}
+            self.info['n_total'] = self.n_total
+            self.info['n_train'] = n_train
+            self.info['n_test'] = self.real_galaxy_catalog.nobjects - n_train
+            self.info['sequence'] = sequence
             with open(self.info_file, 'w') as f:
-                json.dump(self.dict, f)
+                json.dump(self.info, f)
             logging.info(f'Successfully created {self.info_file}.')
             self.create_imgaes()
 
@@ -119,37 +122,37 @@ class Galaxy_Dataset(Dataset):
             gal_ori_image = self.real_galaxy_catalog.getGalImage(k)
             psf_ori_image = self.real_galaxy_catalog.getPSFImage(k)
 
-            gal_ori = galsim.Convolve([psf_ori, gal_ori], real_space=True) # concolve wth original PSF of HST
+            gal_ori = galsim.Convolve([psf_ori, gal_ori]) # concolve wth original PSF of HST
             gal = gal_ori.rotate(theta * galsim.radians) # Rotate by a random angle
             gal = gal.shear(e=gal_e, beta=gal_beta * galsim.radians) # Apply the desired shear
             gal = gal.magnify(gal_mu) # Also apply a magnification mu = ( (1-kappa)^2 - |gamma|^2 )^-1, this conserves surface brightness, so it scales both the area and flux.
             
             # Simulated PSF (optical + atmospgeric)
-            # Define the atmospheric part of the PSF
+            # Define the atmospheric component of PSF
             atmos = galsim.Kolmogorov(fwhm=atmos_fwhm) # Note: the flux here is the default flux=1.
             atmos = atmos.shear(e=atmos_e, beta=atmos_beta*galsim.radians)
-            # Define the optical part of the PSF
+            # Define the optical component of PSF
             lam_over_diam = lam * 1.e-9 / tel_diam # radians
             lam_over_diam *= 206265  # arcsec
-            optics = galsim.OpticalPSF(lam_over_diam,
+            optics = galsim.OpticalPSF( lam_over_diam,
                                         defocus = opt_defocus,
                                         coma1 = opt_c1, coma2 = opt_c2,
                                         astig1 = opt_a1, astig2 = opt_a2,
                                         obscuration = opt_obscuration)
             
-            psf = galsim.Convolve([atmos, optics], real_space=True)
-            final = galsim.Convolve([psf, gal], real_space=True) # Make the combined profile
+            psf = galsim.Convolve([atmos, optics])
+            final = galsim.Convolve([psf, gal]) # Make the combined profile
             # Offset by up to 1/2 pixel in each direction
             dx = rng() - 0.5
             dy = rng() - 0.5
 
             # Dobs the profile
             obs = galsim.ImageF(self.img_size[0], self.img_size[1])
-            final.drawImage(obs, scale=self.pixel_scale, offset=(dx,dy), method=self.method)
+            final.drawImage(obs, scale=self.pixel_scale, offset=(dx,dy), method='auto')
             gal_image = galsim.ImageF(self.img_size[0], self.img_size[1])
-            gal.drawImage(gal_image, scale=self.pixel_scale, offset=(dx,dy), method=self.method)
+            gal.drawImage(gal_image, scale=self.pixel_scale, offset=(dx,dy), method='auto')
             psf_image = galsim.ImageF(self.img_size[0]-1, self.img_size[1]-1)
-            psf.drawImage(psf_image, scale=self.pixel_scale, offset=(dx,dy), method=self.method)
+            psf.drawImage(psf_image, scale=self.pixel_scale, offset=(dx,dy), method='auto')
             
             gal_image += sky_level * (self.pixel_scale**2)
             # gal_image.addNoise(galsim.PoissonNoise(rng))
