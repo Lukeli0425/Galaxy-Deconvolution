@@ -1,7 +1,6 @@
 import torch
 from torchvision.transforms import Compose, Resize, Grayscale, ToTensor
 from torch.utils.data import Dataset, DataLoader
-import pytorch_ssim
 from skimage.metrics import structural_similarity as ssim
 from tqdm import tqdm
 import numpy as np
