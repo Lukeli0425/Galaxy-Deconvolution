@@ -80,7 +80,6 @@ class Galaxy_Dataset(Dataset):
             logging.info(f'Successfully created {self.info_file}.')
             self.create_imgaes()
 
-
     def create_imgaes(self):
         """Generate and save real galaxy images with Galsim."""
         logging.info('Simulating real galaxy images.')
@@ -95,7 +94,7 @@ class Galaxy_Dataset(Dataset):
             gal_beta = 2. * np.pi * rng()       # radians
             gal_g1 = gal_e * np.cos(gal_beta)
             gal_g2 = gal_e * np.sin(gal_beta)
-            gal_mu = 1 + rng() * 0.1            # mu = ( (1-kappa)^2 - g1^2 - g2^2 )^-1 (1.082)
+            gal_mu = 1 + rng() * 0.1            # mu = ((1-kappa)^2 - g1^2 - g2^2)^-1 (1.082)
             theta = 2. * np.pi * rng()          # radians
             # PSF parameters
             rng_gaussian = galsim.GaussianDeviate(seed=random_seed+k+1, mean=self.seeing, sigma=0.18)
@@ -155,9 +154,9 @@ class Galaxy_Dataset(Dataset):
             psf.drawImage(psf_image, scale=self.pixel_scale, offset=(dx,dy), method='auto')
             
             gal_image += sky_level * (self.pixel_scale**2)
-            # gal_image.addNoise(galsim.PoissonNoise(rng))
+            # gal_image.addNoise(galsim.PoissonNoise(rng)) # no noise for ground truth
             obs += sky_level * (self.pixel_scale**2) # Add a constant background level
-            obs.addNoise(galsim.PoissonNoise(rng))
+            obs.addNoise(galsim.PoissonNoise(rng)) # add noise for observation
 
             # Save images
             psnr = PSNR(obs.array, gal_image.array)
@@ -188,7 +187,6 @@ class Galaxy_Dataset(Dataset):
         with open(self.info_file, 'w') as f:
             json.dump(self.info, f)
 
-
     def __len__(self):
         return self.n_train if self.train else self.n_test
 
@@ -215,5 +213,4 @@ class Galaxy_Dataset(Dataset):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(filename=os.path.join(f'/dataset_{I}.log'), level=logging.INFO)
     dataset = Galaxy_Dataset(I=23.5)
