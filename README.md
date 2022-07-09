@@ -9,7 +9,7 @@ git clone https://github.com/Lukeli0425/Unrolled-Galaxy-Image-Deconvolution.git
 
 To create a virtual environment to run this project, run:
 ```zsh
-pip create -n <env_name> requirements.txt 
+pip install -r requirements.txt
 ```
 
 
