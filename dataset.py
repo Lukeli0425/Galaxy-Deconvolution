@@ -192,7 +192,7 @@ class Galaxy_Dataset(Dataset):
         return self.n_train if self.train else self.n_test
 
     def __getitem__(self, i):
-        idx = [i if self.train else i + self.n_train]
+        idx = i if self.train else i + self.n_train
         
         psf_path = os.path.join(self.data_path, 'psf')
         psf = torch.from_numpy(io.imread(os.path.join(psf_path, f"psf_{self.I}_{idx}.tiff"))).unsqueeze(0)
