@@ -2,7 +2,7 @@
 
 To clone this project, run:
 ```zsh
-git clone https://github.com/Lukeli0425/Galaxy-Deconvolution.git
+git clone https://github.com/Lukeli0425/Unrolled-Galaxy-Image-Deconvolution.git
 ```
 
 ## Environment 
