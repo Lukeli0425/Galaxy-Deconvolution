@@ -16,7 +16,7 @@ class Galaxy_Dataset(Dataset):
                         COSMOS_path='./data/', I=23.5, img_size=(48,48),
                         gal_max_shear=0.5, atmos_max_shear=0.2, 
                         pixel_scale=0.2, seeing=0.7):
-        logging.info('\nConstructing dataset.')
+        logging.info('Constructing dataset.')
         # Initialize parameters
         self.train= train # Using train data or test data
         self.COSMOS_dir = os.path.join(COSMOS_path, f"COSMOS_{I}_training_sample")
