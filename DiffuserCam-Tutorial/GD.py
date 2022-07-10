@@ -7,7 +7,7 @@ from PIL import Image
 import yaml
 
 
-def loaddata(psf_file, img_file, f, show_im=True):
+def loaddata(psf_file, img_file, f, show_im=False):
     psf = Image.open(psf_file)
     psf = np.array(psf, dtype='float32')
     obs = Image.open(img_file)
@@ -42,8 +42,8 @@ def loaddata(psf_file, img_file, f, show_im=True):
         psf = pad(psf, obs.shape)
 
     # """ nmormalizing copy from shreyas"""
-    # psf /= np.linalg.norm(psf.ravel())
-    # obs /= np.linalg.norm(obs.ravel())
+    psf /= np.linalg.norm(psf.ravel())
+    obs /= np.linalg.norm(obs.ravel())
     
     if show_im:
         fig1 = plt.figure()
