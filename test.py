@@ -74,8 +74,6 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
         logging.info("Testing Image:  [{:}/{:}]  loss={:.4f}  PSNR: {:.2f} -> {:.2f}".format(
                         idx+1, len(test_loader), 
                         loss.item(), PSNR(gt, obs), PSNR(gt, rec)))
-        if idx>10:
-            break;
         
     logging.info("test_loss={:.4f}  PSNR: {:.2f} -> {:.2f}".format(
                     test_loss/len(test_loader),
