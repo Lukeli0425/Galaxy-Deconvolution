@@ -6,17 +6,11 @@ from PIL import Image
 import yaml
 
 
-def loaddata(show_im=True):
-    psf = Image.open(psfname)
+def loaddata(psf_file, img_file, f, show_im=False):
+    psf = Image.open(psf_file)
     psf = np.array(psf, dtype='float32')
-    data = Image.open(imgname)
+    data = Image.open(img_file)
     data = np.array(data, dtype='float32')
-    
-    """In the picamera, there is a non-trivial background 
-    (even in the dark) that must be subtracted"""
-    bg = np.mean(psf[5:15,5:15]) 
-    psf -= bg
-    data -= bg
     
     """Resize to a more manageable size to do reconstruction on. 
     Because resizing is downsampling, it is subject to aliasing 
@@ -30,8 +24,19 @@ def loaddata(show_im=True):
             img = 0.25*(img[::2,::2,...]+img[1::2,::2,...]+img[::2,1::2,...]+img[1::2,1::2,...])
         return img    
     
-    psf = resize(psf, f)
-    data = resize(data, f)
+    def pad2(img):
+        h, w = nextPow2(img.shape[0]), nextPow2(img.shape[1])
+        img_pad = np.zeros((h, w))
+        starti = (h - img.shape[0]) // 2
+        endi = starti + img.shape[0]
+        startj = (w // 2) - (img.shape[1] // 2)
+        endj = startj + img.shape[1]
+        img_pad[starti:endi, startj:endj] = img
+
+        return img_pad
+
+    psf = pad2(psf)
+    data = pad2(data)
     
     
     """ nmormalizing copy from shreyas"""
@@ -75,7 +80,7 @@ def initMatrices(h):
 
     utils = [crop, pad]
     v = np.real(pad(x))
-    
+    print(H.shape)
     return H, Hadj, v, utils
 
 def nextPow2(n):
@@ -83,6 +88,8 @@ def nextPow2(n):
 
 def grad(Hadj, H, vk, b, crop, pad):
     Av = calcA(H, vk, crop)
+    # print(Av.shape)
+    # print(b.shape)
     diff = Av - b
     return np.real(calcAHerm(Hadj, diff, pad))
 
@@ -96,14 +103,14 @@ def calcAHerm(Hadj, diff, pad):
     return fft.ifftshift(fft.ifft2(Hadj*X, norm="ortho"))
 
 
-def grad_descent(h, b):
+def grad_descent(h, b, n_iters, disp_pic=50):
     H, Hadj, v, utils = initMatrices(h)
     crop = utils[0]
     pad = utils[1]
         
     alpha = np.real(2/(np.max(Hadj * H)))
     iterations = 0
-     
+
     def non_neg(xi):
         xi = np.maximum(xi,0)
         return xi
@@ -111,35 +118,29 @@ def grad_descent(h, b):
     #proj = lambda x: x #Do no projection
     proj = non_neg #Enforce nonnegativity at every gradient step. Comment out as needed.
 
-
     parent_var = [H, Hadj, b, crop, pad, alpha, proj]
     
     vk = v
-    
-    
-    
+
     #### uncomment for Nesterov momentum update ####   
-    #p = 0
-    #mu = 0.9
+    p = 0
+    mu = 0.9
     ################################################
-    
-    
-    
+
     #### uncomment for FISTA update ################
     tk = 1
     xk = v
     ################################################
         
-    for iterations in range(iters):   
-        
+    for iterations in range(n_iters):   
         # uncomment for regular GD update
-        #vk = gd_update(vk, parent_var)
+        # vk = gd_update(vk, parent_var)
         
         # uncomment for Nesterov momentum update 
-        #vk, p = nesterov_update(vk, p, mu, parent_var)
+        vk, p = nesterov_update(vk, p, mu, parent_var)
         
         # uncomment for FISTA update
-        vk, tk, xk = fista_update(vk, tk, xk, parent_var)
+        # vk, tk, xk = fista_update(vk, tk, xk, parent_var)
 
         if iterations % disp_pic == 0:
             print(iterations)
@@ -148,7 +149,6 @@ def grad_descent(h, b):
             plt.imshow(image, cmap='gray')
             plt.title('Reconstruction after iteration {}'.format(iterations))
             plt.show()
-    
     
     return proj(crop(vk)) 
     
@@ -159,7 +159,7 @@ def gd_update(vk, parent_var):
     vk -= alpha*gradient
     vk = proj(vk)
     
-    return xk    
+    return vk    
 
 def nesterov_update(vk, p, mu, parent_var):
     H, Hadj, b, crop, pad, alpha, proj = parent_var
@@ -188,15 +188,18 @@ def fista_update(vk, tk, xk, parent_var):
 
 if __name__ == "__main__":
     ### Reading in params from config file (don't mess with parameter names!)
-    params = yaml.load(open("gd_config.yml"))
-    for k,v in params.items():
-        exec(k + "=v")
+    # params = yaml.load(open("gd_config.yml"))
+    # for k,v in params.items():
+    #     exec(k + "=v")
+    n_iters = 1000
 
-    psf, data = loaddata()
-    final_im = grad_descent(psf, data)
-    print(iters)
+    psf, data = loaddata(psf_file='./dataset/COSMOS_23.5/psf/psf_23.5_0.tiff',
+                        img_file='./dataset/COSMOS_23.5/obs/obs_23.5_0.tiff',
+                        f=1)
+    final_im = grad_descent(psf, data, n_iters)
+    
     plt.imshow(final_im, cmap='gray')
-    plt.title('Final reconstruction after {} iterations'.format(iters))
+    plt.title('Final reconstruction after {} iterations'.format(n_iters))
     plt.show()
     saveim = input('Save final image? (y/n) ')
     if saveim == 'y':
