@@ -95,12 +95,12 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
     obs_psnr = results['obs_psnr']
     rec_psnr = results['rec_psnr']
     plt.figure(figsize=(10,10))
-    plt.plot([10,35],[10,35],'r')
+    plt.plot([10,35],[10,35],'r') # plt y=x line
     plt.plot(obs_psnr, rec_psnr, '.')
     plt.title('PSNR of P4IP Test Results', fontsize=18)
     plt.xlabel('PSNR of Observed Galaxies', fontsize=16)
     plt.ylabel('PSNR of Recovered Galaxies', fontsize=16)
-    plt.savefig(os.path.join(result_path, 'p4ip_psnr.jpg'))
+    plt.savefig(os.path.join(result_path, 'p4ip_psnr.jpg'), bbox_inches='tight')
     plt.close()
 
     return results
