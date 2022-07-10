@@ -19,7 +19,7 @@ wget https://zenodo.org/record/3242143/files/COSMOS_23.5_training_sample.tar.gz
 wget https://zenodo.org/record/3242143/files/COSMOS_25.2_training_sample.tar.gz
 ```
 
-Unzip the downloaded file:
+Unzip the downloaded files:
 ```zsh
 tar zxvf COSMOS_23.5_training_sample.tar.gz
 tar zxvf COSMOS_25.2_training_sample.tar.gz
