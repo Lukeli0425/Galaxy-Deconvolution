@@ -13,14 +13,13 @@ from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 from utils import PSNR
 
 
-def test(model='P4IP_Net', n_iters=8, train_test_split=0.7, 
-        result_path='./results/', model_path='./saved models/model_20.pth'):
+def test_p4ip(n_iters=8, result_path='./results/', model_path='./saved models/model_20.pth'):
     """Test the model."""
     if not os.path.exists(result_path):
         os.mkdir(result_path)
         
-    full_dataset = Galaxy_Dataset()
-    test_loader = DataLoader(full_dataset, batch_size=1, shuffle=False)
+    test_dataset = Galaxy_Dataset(train=False)
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = P4IP_Net(n_iters=n_iters)
     model.to(device)
@@ -70,4 +69,4 @@ def test(model='P4IP_Net', n_iters=8, train_test_split=0.7,
     return
 
 if __name__ =="__main__":
-    test()
+    test_p4ip()

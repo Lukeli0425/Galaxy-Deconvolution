@@ -214,7 +214,7 @@ class Galaxy_Dataset(Dataset):
 
         return (obs, psf, M), gt
 
-def get_dataloader(train_test_split=0.857, batch_size=1):
+def get_dataloader(train_test_split=0.857, batch_size=32):
     """Create dataloaders from Galaxy Dataset."""
     train_dataset = Galaxy_Dataset(train=True)
     train_size = int(train_test_split * len(train_dataset))

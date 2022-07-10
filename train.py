@@ -52,8 +52,8 @@ def train_p4ip( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_si
 
                 logging.info("[{}: {}/{}]  train_loss={:.4f}  test_loss={:.4f}".format(
                                 epoch+1, idx+1, len(train_loader),
-                                train_loss/(idx+1), 0,
-                                test_loss/len(val_loader), 0))
+                                train_loss/(idx+1),
+                                test_loss/len(val_loader)))
     
     if not os.path.exists(model_save_path):
         os.mkdir(model_save_path)
