@@ -9,5 +9,6 @@ scikit-image
 opencv-python
 PILLOW
 bm3d
-galsim
 astropy
+galsim
+fpfs
