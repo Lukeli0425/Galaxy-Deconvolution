@@ -25,6 +25,7 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = P4IP_Net(n_iters=n_iters)
     model.to(device)
+    # Load the p4ip model
     try:
         model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
     except:
@@ -64,7 +65,7 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
         plt.subplot(2,2,4)
         plt.imshow(rec)
         plt.title('Recovered Galaxy\n($PSNR={:.2f}$)'.format(PSNR(gt, rec)))
-        plt.savefig(os.path.join(result_path, f"result_{idx}.jpg"), bbox_inches='tight')
+        plt.savefig(os.path.join(result_path, f"p4ip_result_{idx}.jpg"), bbox_inches='tight')
         plt.close()
         
         obs_psnr.append(PSNR(gt, obs))
@@ -73,13 +74,15 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
         logging.info("Testing Image:  [{:}/{:}]  loss={:.4f}  PSNR: {:.2f} -> {:.2f}".format(
                         idx+1, len(test_loader), 
                         loss.item(), PSNR(gt, obs), PSNR(gt, rec)))
+        if idx>10:
+            break;
         
     logging.info("test_loss={:.4f}  PSNR: {:.2f} -> {:.2f}".format(
                     test_loss/len(test_loader),
                     np.mean(obs_psnr), np.mean(rec_psnr)))
         
     # Save results to json file
-    results['test_loss'] = test_loss
+    results['test_loss'] = test_loss/len(test_loader)
     results['obs_psnr_mean'] = np.mean(obs_psnr)
     results['rec_psnr_mean'] = np.mean(rec_psnr)
     results['obs_psnr'] = obs_psnr
