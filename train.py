@@ -50,7 +50,7 @@ def train_p4ip( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_si
                         loss = loss_fn(gt.squeeze(dim=1), rec)
                         test_loss += loss.item()
 
-                logging.info("[{}: {}/{}]  train_loss={:.4f}  test_loss={:.4f}".format(
+                logging.info(" [{}: {}/{}]  train_loss={:.4f}  test_loss={:.4f}".format(
                                 epoch+1, idx+1, len(train_loader),
                                 train_loss/(idx+1),
                                 test_loss/len(val_loader)))
