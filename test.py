@@ -1,34 +1,40 @@
-import logging
 import os
+import logging
+import json
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-from torch import nn
-from torch.utils.data import DataLoader, random_split
-from torchvision import transforms
-from torch.optim import Adam, SGD
+from torch.utils.data import DataLoader
 from dataset import Galaxy_Dataset
 from models.network_p4ip import P4IP_Net
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 from utils import PSNR
 
 
-def test_p4ip(n_iters=8, result_path='./results/', model_path='./saved models/model_20.pth'):
-    """Test the model."""
+def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_models/p4ip_10.pth'):
+    """Test the model."""    
+    logging.info('Start testing p4ip model.')
+    results = {} # dictionary to record the test results
+    results_file = os.path.join(result_path, 'p4ip_results.json')
+
     if not os.path.exists(result_path):
         os.mkdir(result_path)
-        
+    
     test_dataset = Galaxy_Dataset(train=False)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = P4IP_Net(n_iters=n_iters)
     model.to(device)
-    model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
+    try:
+        model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
+    except:
+        logging.raiseExceptions('Loading model failed!')
+    
     loss_fn = MultiScaleLoss()
 
     test_loss = 0.0
-    obs_psnr = 0.0
-    rec_psnr = 0.0
+    obs_psnr = []
+    rec_psnr = []
     model.eval()
     for idx, ((obs, psf, M), gt) in enumerate(test_loader):
         with torch.no_grad():
@@ -61,12 +67,33 @@ def test_p4ip(n_iters=8, result_path='./results/', model_path='./saved models/mo
         plt.savefig(os.path.join(result_path, f"result_{idx}.jpg"), bbox_inches='tight')
         plt.close()
         
-        obs_psnr += PSNR(gt, obs)
-        rec_psnr += PSNR(gt, rec)
-            
-    print("PSNR: {:.2f} -> {:.2f}".format(obs_psnr/len(test_loader), rec_psnr/len(test_loader)))
+        obs_psnr.append(PSNR(gt, obs))
+        rec_psnr.append(PSNR(gt, rec))
+        
+        logging.info("Testing Image:  [{:}/{:}]  loss={:.4f}  PSNR: {:.2f} -> {:.2f}".format(
+                        idx+1, len(test_loader), 
+                        loss.item(), PSNR(gt, obs), PSNR(gt, rec)))
+        
+    logging.info("test_loss={:.4f}  PSNR: {:.2f} -> {:.2f}".format(
+                    test_loss/len(test_loader),
+                    np.mean(obs_psnr), np.mean(rec_psnr)))
+        
+    # Save results to json file
+    results['test_loss'] = test_loss
+    results['obs_psnr_mean'] = np.mean(obs_psnr)
+    results['rec_psnr_mean'] = np.mean(rec_psnr)
+    results['obs_psnr'] = obs_psnr
+    results['rec_psnr'] = rec_psnr
+    with open(results_file, 'w') as f:
+        json.dump(results, f)
+    logging.info(f"Test results saved to {results_file}.")
 
-    return
+    return results
 
 if __name__ =="__main__":
-    test_p4ip()
+    logging.basicConfig(level=logging.INFO)
+    
+    if not os.path.exists('./results/'):
+        os.mkdir('./results/')
+
+    test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_models/p4ip_10.pth')
