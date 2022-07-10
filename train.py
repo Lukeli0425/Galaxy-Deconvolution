@@ -7,7 +7,7 @@ from dataset import get_dataloader
 from models.network_p4ip import P4IP_Net
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 
-def train_p4ip( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.7, batch_size=32,
+def train_p4ip( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_size=32,
                 model_save_path='./saved_models/', load_pretrain=False,
                 pretrained_file = None):
     """Train p4ip (unrolled PnP-ADMM) model."""
@@ -69,13 +69,15 @@ if __name__ =="__main__":
     parser.add_argument('--n_epoch', type=int, default=10)
     parser.add_argument('--n_iters', type=int, default=8)
     parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--load_pretrain', type=bool, default=True)
+    parser.add_argument('--train_val_split', type=float, default=0.857)
     parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--load_pretrain', type=bool, default=True)
     opt = parser.parse_args()
 
     train_p4ip( n_epochs=opt.n_epoch,
                 n_iters=opt.n_iters,
                 lr=opt.lr,
+                train_val_split=opt.train_val_split,
                 batch_size=opt.batch_size,
                 load_pretrain=opt.load_pretrain,
                 model_save_path='./saved_models/',

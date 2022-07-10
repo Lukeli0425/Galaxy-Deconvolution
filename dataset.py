@@ -214,16 +214,16 @@ class Galaxy_Dataset(Dataset):
 
         return (obs, psf, M), gt
 
-def get_dataloader(train_test_split=0.7, batch_size=1):
+def get_dataloader(train_test_split=0.857, batch_size=1):
     """Create dataloaders from Galaxy Dataset."""
-    full_dataset = Galaxy_Dataset(train=True)
-    train_size = int(train_test_split * len(full_dataset))
-    test_size = len(full_dataset) - train_size
-    train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])
+    train_dataset = Galaxy_Dataset(train=True)
+    train_size = int(train_test_split * len(train_dataset))
+    val_size = len(train_dataset) - train_size
+    train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    return train_loader, test_loader
+    return train_loader, val_loader
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
