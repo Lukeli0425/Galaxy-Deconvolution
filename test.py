@@ -130,8 +130,8 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
     plt.plot([10,35],[10,35],'r') # plt y=x line
     plt.plot(obs_psnr, rec_psnr, '.')
     plt.title('PSNR of P4IP Test Results', fontsize=18)
-    plt.xlabel('PSNR of Observed Galaxies', fontsize=16)
-    plt.ylabel('PSNR of Recovered Galaxies', fontsize=16)
+    plt.xlabel('PSNR of Observed Galaxies', fontsize=15)
+    plt.ylabel('PSNR of Recovered Galaxies', fontsize=15)
     plt.savefig(os.path.join(result_path, 'p4ip_psnr.jpg'), bbox_inches='tight')
     plt.close()
 
@@ -181,6 +181,31 @@ def test_shear(results_file='./results/p4ip/p4ip_results.json', I=23.5):
         rec_shear_err[0], rec_shear_err[1],
         fpfs_shear_err[0], fpfs_shear_err[1]
     ))
+    
+    # Plot the error
+    plt.figure(figsize=(15,4))
+    plt.subplot(1,3,1)
+    plt.plot((obs_shear - gt_shear)[:,0], (obs_shear - gt_shear)[:,1],'.')
+    plt.xlabel('$\sigma_1$', fontsize=13)
+    plt.ylabel('$\sigma_2$', fontsize=13)
+    plt.xlim([-0.8,0.8])
+    plt.ylim([-0.8,0.8])
+    plt.title('Observed Galaxy', fontsize=13)
+    plt.subplot(1,3,2)
+    plt.plot((rec_shear - gt_shear)[:,0], (rec_shear - gt_shear)[:,1],'.')
+    plt.xlabel('$\sigma_1$', fontsize=13)
+    plt.ylabel('$\sigma_2$', fontsize=13)
+    plt.xlim([-0.8,0.8])
+    plt.ylim([-0.8,0.8])
+    plt.title('P4IP Recovered Galaxy', fontsize=13)
+    plt.subplot(1,3,3)
+    plt.plot((fpfs_shear - gt_shear)[:,0], (fpfs_shear - gt_shear)[:,1],'.')
+    plt.xlabel('$\sigma_1$', fontsize=13)
+    plt.ylabel('$\sigma_2$', fontsize=13)
+    plt.xlim([-0.8,0.8])
+    plt.ylim([-0.8,0.8])
+    plt.title('Fourier Power Spectrum Deconvolution', fontsize=13)
+    plt.savefig(os.path.join('./results/p4ip/', 'p4ip_shear_err.jpg'), bbox_inches='tight')
 
     # Save shear estimation
     results['gt_shear'] = gt_shear.tolist()
@@ -193,6 +218,9 @@ def test_shear(results_file='./results/p4ip/p4ip_results.json', I=23.5):
     with open(results_file, 'w') as f:
         json.dump(results, f)
     logging.info(f"Shear estimation results saved to {results_file}.")
+    
+    
+    return results
 
 
 
