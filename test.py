@@ -9,8 +9,32 @@ from torch.utils.data import DataLoader
 from dataset import Galaxy_Dataset
 from models.network_p4ip import P4IP_Net
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
-from utils import PSNR
+from utils import PSNR, estimate_shear
 
+class p4ip_deconvolver:
+    """Wrapper class for P4IP deconvolution."""
+    def __init__(self, model_path):
+        self.model_path = model_path
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        model = P4IP_Net(n_iters=8)
+        model.to(device)
+        # Load the p4ip model
+        try:
+            self.model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
+        except:
+            logging.raiseExceptions('Failed loading P4IP model!')
+
+    def deconvolve(self, obs, psf):
+        """Deconvolve PSF with P4IP model."""
+        psf = torch.from_numpy(psf).unsqueeze(dim=0).unsqueeze(dim=0)
+        obs = torch.from_numpy(obs).unsqueeze(dim=0).unsqueeze(dim=0)
+        M = obs.ravel().mean()/0.33
+        M = torch.Tensor(M).view(1,1,1,1)
+
+        output = self.model(obs, psf, M)
+        rec = output[-1].squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+
+        return rec
 
 def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_models/p4ip_10.pth', I=23.5):
     """Test the model."""    
@@ -34,7 +58,7 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
     try:
         model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
     except:
-        logging.raiseExceptions('Loading model failed!')
+        logging.raiseExceptions('Failed loading P4IP model!')
     
     loss_fn = MultiScaleLoss()
 
@@ -113,10 +137,60 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
 
     return results
 
+def test_shear(results_file='./results/p4ip/p4ip_results.json', I=23.5):
+    """Estimate shear"""
+    test_dataset = Galaxy_Dataset(train=False, I=I)
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+
+    gt_shear = []
+    obs_shear = []
+    rec_shear = []
+    with open(results_file, 'r') as f:
+        results = json.load(f)
+    n_test = results['n_test']
+
+    for idx, ((obs, psf, M), gt) in enumerate(test_loader):
+        with torch.no_grad():
+            gt = gt.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+            # psf = psf.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+            obs = obs.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+            rec = io.imread(os.path.join('./results/p4ip/rec/', f"rec_{I}_{idx}.tiff"))
+
+            # Calculate shear
+            gt_shear.append(estimate_shear(gt))
+            obs_shear.append(estimate_shear(obs))
+            rec_shear.append(estimate_shear(rec))
+    gt_shear = np.array(gt_shear)
+    obs_shear = np.array(obs_shear)
+    rec_shear = np.array(rec_shear)
+    obs_shear_err = np.sqrt(np.mean((obs_shear - gt_shear)**2, axis=0))
+    rec_shear_err = np.sqrt(np.mean((rec_shear - gt_shear)**2, axis=0))
+    logging.info('Shear error ({:.5f},{:.5f}) -> ({:.5f},{:.5f})'.format(
+        obs_shear_err[0], obs_shear_err[1],
+        rec_shear_err[0], rec_shear_err[1]
+    ))
+
+    # Save shear estimation
+    results['gt_shear'] = gt_shear
+    results['obs_shear'] = obs_shear
+    results['rec_shear'] = rec_shear
+    results['obs_shear_err'] = obs_shear_err
+    results['rec_shear_err'] = rec_shear_err
+    with open(results_file, 'w') as f:
+        json.dump(results, f)
+    logging.info(f"Shear estimation results saved to {results_file}.")
+
+
+
 if __name__ =="__main__":
     logging.basicConfig(level=logging.INFO)
     
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
 
-    test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_models/p4ip_10.pth')
+    # test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_models/p4ip_10.pth')
+    test_shear()
+    # a = np.array([(1,2), (3,4)])
+    # b = np.array([(1,1), (1,1)])
+    # print((a - b)**2)
+    # print(np.sqrt(np.mean(a, axis=0)))
