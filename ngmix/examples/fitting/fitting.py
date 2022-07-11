@@ -65,8 +65,8 @@ def main():
 
     # this bootstraps the process, first fitting psfs then the object
     boot = ngmix.bootstrap.Bootstrapper(
-        runner=runner,
-        psf_runner=psf_runner,
+        runner=runner#,
+        # psf_runner=psf_runner,
     )
 
     res = boot.go(obs)

@@ -1,7 +1,9 @@
+import os
 import numpy as np
-import math
+from skimage import io
 import torch
 import galsim
+import fpfs
 
 def PSNR(img1, img2, normalize=True):
     """Calculate the PSNR of two images."""
@@ -23,8 +25,26 @@ def PSNR(img1, img2, normalize=True):
 
     return psnr
 
+
+def estimate_shear(obs, psf=None):
+    """Estimate shear from input 2D image."""
+
+    if psf == None: # Use delta for PSF if not given, equivalent to no deconvolution
+        psf = np.zeros(obs.shape)
+        psf[int(obs.shape[0]/2), int(obs.shape[1]/2)] = 1
+
+    fpTask = fpfs.fpfsBase.fpfsTask(psf, beta=0.75)
+    modes = fpTask.measure(obs)
+    ells = fpfs.fpfsBase.fpfsM2E(modes, const=1, noirev=False)
+    resp = ells['fpfs_RE'][0]
+    g_1 = ells['fpfs_e1'][0] / resp
+    g_2 = ells['fpfs_e2'][0] / resp
+
+    return (g_1, g_2)
+
+
 if __name__ == "__main__":
-    a = np.array([[1,2],[3,4]])
-    img1 = np.array([[0.5,1.5],[2.5,3.5]])
-    img1 = (img1 - img1.min())/(img1.max() - img1.min())
-    print(img1.sum())
+    idx = 0
+    obs = io.imread(os.path.join('./dataset/COSMOS_23.5/obs/', f"obs_23.5_{idx}.tiff"))
+    g_1, g_2 = estimate_shear(obs)
+    print(g_1, g_2)
