@@ -12,7 +12,7 @@ from utils import PSNR
 
 class Galaxy_Dataset(Dataset):
     """A galaxy image dataset generated with Galsim."""
-    def __init__(self,  train=True, data_path='./dataset/', train_split = 0.7,
+    def __init__(self,  train=True, data_path='./dataset/', train_split = 0.7, n_total=0,
                         COSMOS_path='./data/', I=23.5, img_size=(48,48),
                         gal_max_shear=0.5, atmos_max_shear=0.2, 
                         pixel_scale=0.2, seeing=0.7):
@@ -52,7 +52,7 @@ class Galaxy_Dataset(Dataset):
         # Read in real galaxy catalog
         try:
             self.real_galaxy_catalog = galsim.RealGalaxyCatalog(dir=self.COSMOS_dir, sample=str(self.I))
-            self.n_total = self.real_galaxy_catalog.nobjects
+            self.n_total = self.real_galaxy_catalog.nobjects if n_total==0 else n_total
             logging.info(f'Successfully read in {self.n_total} real galaxies from {self.COSMOS_dir}.')
         except:
             logging.critical(f'Failed reading in real galaxies from {self.COSMOS_dir}.')
@@ -63,6 +63,7 @@ class Galaxy_Dataset(Dataset):
             logging.info(f'Successfully loaded in {self.info_file}.')
             with open(self.info_file, 'r') as f:
                 self.info = json.load(f)
+            self.n_total = self.info['n_total']
             self.n_train = self.info['n_train']
             self.n_test = self.info['n_test']
             self.sequence = self.info['sequence']
@@ -92,7 +93,7 @@ class Galaxy_Dataset(Dataset):
             # Galaxy parameters 
             rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
             sky_level = 2.5e4                   # ADU / arcsec^2
-            psf_flux = 1.e7
+            psf_flux = 1.e5
             gal_flux = 1.e5                     # arbitrary choice, makes nice (not too) noisy images
             gal_e = rng() * self.gal_max_shear  # shear of galaxy
             gal_beta = 2. * np.pi * rng()       # radians
@@ -135,7 +136,7 @@ class Galaxy_Dataset(Dataset):
             
             # Simulated PSF (optical + atmospgeric)
             # Define the atmospheric component of PSF
-            atmos = galsim.Kolmogorov(fwhm=atmos_fwhm, flux=np.sqrt(psf_flux)) # Note: the flux here is the default flux=1.
+            atmos = galsim.Kolmogorov(fwhm=atmos_fwhm, flux=1) # Note: the flux here is the default flux=1.
             atmos = atmos.shear(e=atmos_e, beta=atmos_beta*galsim.radians)
             # Define the optical component of PSF
             lam_over_diam = lam * 1.e-9 / tel_diam # radians
@@ -145,7 +146,7 @@ class Galaxy_Dataset(Dataset):
                                         coma1 = opt_c1, coma2 = opt_c2,
                                         astig1 = opt_a1, astig2 = opt_a2,
                                         obscuration = opt_obscuration,
-                                        flux=np.sqrt(psf_flux))
+                                        flux=1)
             
             psf = galsim.Convolve([atmos, optics], real_space=True)
             final = galsim.Convolve([psf, gal]) # Make the combined profile
@@ -164,9 +165,11 @@ class Galaxy_Dataset(Dataset):
             gal_image += sky_level * (self.pixel_scale**2)
             # gal_image.addNoise(galsim.PoissonNoise(rng)) # no noise for ground truth
             obs += sky_level * (self.pixel_scale**2) # Add a constant background level
-            obs.addNoise(galsim.CCDNoise(rng, sky_level=0, gain=gain, read_noise=read_noise)) # add noise for observation
-            psf_image += sky_level * (self.pixel_scale**2) # Add a constant background level
-            psf_image.addNoise(galsim.CCDNoise(rng, sky_level=0, gain=gain, read_noise=read_noise)) # add noise for observation
+            obs.addNoise(galsim.CCDNoise(rng, gain=gain, read_noise=read_noise)) # add noise for observation
+            # obs.addNoise(galsim.PoissonNoise(rng))
+            psf_image += psf_image*psf_flux + sky_level * (self.pixel_scale**2) # Add a constant background level
+            psf_image.addNoise(galsim.CCDNoise(rng, gain=gain, read_noise=read_noise)) # add noise for observation
+            # psf_image.addNoise(galsim.PoissonNoise(rng))
 
             # Save images
             psnr = PSNR(obs.array, gal_image.array)

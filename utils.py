@@ -32,17 +32,17 @@ def estimate_shear(obs, psf=None, use_psf=False):
     if not use_psf: # Use delta for PSF if not given, equivalent to no deconvolution
         psf = np.zeros(obs.shape)
         psf[int(obs.shape[0]/2), int(obs.shape[1]/2)] = 1
-    # else: # Crop out PSF
-    #     # beg = psf.shape[0]//2 - rcut
-    #     # end = beg + 2*rcut + 1
-    #     # psf = psf[beg:end,beg:end]
-    #     psf_pad = np.zeros((obs.shape[0], obs.shape[1]))
-    #     starti = (obs.shape[0] - psf.shape[0]) // 2
-    #     endi = starti + psf.shape[0]
-    #     startj = (obs.shape[1] // 2) - (psf.shape[1] // 2)
-    #     endj = startj + psf.shape[1]
-    #     psf_pad[starti:endi, startj:endj] = psf
-    #     psf = psf_pad
+    else: # Crop out PSF
+        # beg = psf.shape[0]//2 - rcut
+        # end = beg + 2*rcut + 1
+        # psf = psf[beg:end,beg:end]
+        psf_pad = np.zeros((obs.shape[0], obs.shape[1]))
+        starti = (obs.shape[0] - psf.shape[0]) // 2
+        endi = starti + psf.shape[0]
+        startj = (obs.shape[1] // 2) - (psf.shape[1] // 2)
+        endj = startj + psf.shape[1]
+        psf_pad[starti:endi, startj:endj] = psf
+        psf = psf_pad
 
     fpTask = fpfs.fpfsBase.fpfsTask(psf, beta=0.75)
     modes = fpTask.measure(obs)

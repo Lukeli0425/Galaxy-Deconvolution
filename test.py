@@ -13,25 +13,25 @@ from utils import PSNR, estimate_shear
 
 class p4ip_deconvolver:
     """Wrapper class for P4IP deconvolution."""
-    def __init__(self, model_path):
+    def __init__(self, model_path='./saved_models/p4ip_10.pth'):
         self.model_path = model_path
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        model = P4IP_Net(n_iters=8)
-        model.to(device)
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.model = P4IP_Net(n_iters=8)
+        self.model.to(self.device)
         # Load the p4ip model
         try:
-            self.model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
+            self.model.load_state_dict(torch.load(model_path, map_location=torch.device(self.device)))
         except:
             logging.raiseExceptions('Failed loading P4IP model!')
 
     def deconvolve(self, obs, psf):
         """Deconvolve PSF with P4IP model."""
-        psf = torch.from_numpy(psf).unsqueeze(dim=0).unsqueeze(dim=0)
-        obs = torch.from_numpy(obs).unsqueeze(dim=0).unsqueeze(dim=0)
+        psf = torch.from_numpy(psf).unsqueeze(dim=0).unsqueeze(dim=0) if type(psf) is np.ndarray else psf
+        obs = torch.from_numpy(obs).unsqueeze(dim=0).unsqueeze(dim=0) if type(obs) is np.ndarray else obs
         M = obs.ravel().mean()/0.33
         M = torch.Tensor(M).view(1,1,1,1)
 
-        output = self.model(obs, psf, M)
+        output = self.model(obs.to(self.device), psf.to(self.device), M.to(self.device))
         rec = output[-1].squeeze(dim=0).squeeze(dim=0).cpu().numpy()
 
         return rec
@@ -137,37 +137,50 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
 
     return results
 
-def test_shear(results_file='./results/p4ip/p4ip_results.json', I=23.5):
+def test_shear(result_path='./results/p4ip/', results_file='p4ip_results.json', I=23.5):
     """Estimate shear"""
-    test_dataset = Galaxy_Dataset(train=False, I=I)
+    test_dataset = Galaxy_Dataset(train=False, I=I, data_path='./dataset_noisy_psf/')
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
     gt_shear = []
     obs_shear = []
     rec_shear = []
     fpfs_shear = []
-    with open(results_file, 'r') as f:
-        results = json.load(f)
+    if not os.path.exists(result_path):
+        os.mkdir(result_path)
+    try:
+        with open(result_path, results_file, 'r') as f:
+            results = json.load(f)
+        logging.warning('Failed loading in {results_file}.')
+    except:
+        results = {}
 
+    p4ip = p4ip_deconvolver()
     for idx, ((obs, psf, M), gt) in enumerate(test_loader):
         with torch.no_grad():
+            
+            # rec = io.imread(os.path.join('./results/p4ip/rec/', f"rec_{I}_{idx}.tiff"))
+            rec = p4ip.deconvolve(obs, psf)
             gt = gt.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
             psf = psf.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
             obs = obs.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
-            rec = io.imread(os.path.join('./results/p4ip/rec/', f"rec_{I}_{idx}.tiff"))
 
             # Calculate shear
+            
             gt_shear.append(estimate_shear(gt))
             obs_shear.append(estimate_shear(obs))
             rec_shear.append(estimate_shear(rec))
-            fpfs_shear.append(estimate_shear(obs, psf, use_psf=True))
+            try:
+                fpfs_shear.append(estimate_shear(obs, psf, use_psf=True))
+            except:
+                fpfs_shear.append(estimate_shear(obs))
             logging.info('Estimating shear: [{}/{}]  gt:({:.3f},{:.3f})  obs:({:.3f},{:.3f})  rec:({:.3f},{:.3f})  fpfs:({:.3f},{:.3f})'.format(
-                idx, len(test_loader),
+                idx+1, len(test_loader),
                 gt_shear[-1][0], gt_shear[-1][1],
                 obs_shear[-1][0], obs_shear[-1][1],
                 rec_shear[-1][0], rec_shear[-1][1],
                 fpfs_shear[-1][0], fpfs_shear[-1][1]
-            ))
+                ))
             
     gt_shear = np.array(gt_shear)
     obs_shear = np.array(obs_shear)
@@ -183,7 +196,7 @@ def test_shear(results_file='./results/p4ip/p4ip_results.json', I=23.5):
     ))
     
     # Plot the error
-    plt.figure(figsize=(15,4))
+    plt.figure(figsize=(16,4))
     plt.subplot(1,3,1)
     plt.plot((obs_shear - gt_shear)[:,0], (obs_shear - gt_shear)[:,1],'.')
     plt.xlabel('$\sigma_1$', fontsize=13)
@@ -205,7 +218,7 @@ def test_shear(results_file='./results/p4ip/p4ip_results.json', I=23.5):
     plt.xlim([-0.8,0.8])
     plt.ylim([-0.8,0.8])
     plt.title('Fourier Power Spectrum Deconvolution', fontsize=13)
-    plt.savefig(os.path.join('./results/p4ip/', 'p4ip_shear_err.jpg'), bbox_inches='tight')
+    plt.savefig(os.path.join(result_path, 'p4ip_shear_err.jpg'), bbox_inches='tight')
 
     # Save shear estimation
     results['gt_shear'] = gt_shear.tolist()
@@ -231,7 +244,7 @@ if __name__ =="__main__":
         os.mkdir('./results/')
 
     # test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_models/p4ip_10.pth')
-    test_shear()
+    test_shear(result_path='./results/p4ip_noisy_psf/')
     # a = np.array([(1,2), (3,4)])
     # b = np.array([(1,1), (1,1)])
     # print(a.tolist())

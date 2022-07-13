@@ -1,6 +1,7 @@
 # Large data
 data/
 dataset/
+dataset_noisy_psf/
 
 # Vscode setting
 .vscode/
