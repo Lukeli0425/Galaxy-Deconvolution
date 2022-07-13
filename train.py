@@ -7,11 +7,11 @@ from dataset import get_dataloader
 from models.network_p4ip import P4IP_Net
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 
-def train_p4ip( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_size=32,
+def train_P4IP( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_size=32,
                 model_save_path='./saved_models/', load_pretrain=False,
                 pretrained_file = None):
-    """Train p4ip (unrolled PnP-ADMM) model."""
-    logging.info('\nStart training p4ip.')
+    """Train P4IP (unrolled PnP-ADMM) model."""
+    logging.info('\nStart training P4IP.')
     train_loader, val_loader = get_dataloader(train_test_split=train_val_split, batch_size=batch_size)
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -57,28 +57,28 @@ def train_p4ip( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_si
     
     if not os.path.exists(model_save_path):
         os.mkdir(model_save_path)
-    torch.save(model.state_dict(), os.path.join(model_save_path, f'p4ip_{n_epochs}.pth'))
-    logging.info(f'Pip4 model saved to {os.path.join(model_save_path, f"p4ip_{n_epochs}.pth")}')
+    torch.save(model.state_dict(), os.path.join(model_save_path, f'P4IP_{n_epochs}.pth'))
+    logging.info(f'Pip4 model saved to {os.path.join(model_save_path, f"P4IP_{n_epochs}.pth")}')
 
     return
 
 if __name__ =="__main__":
     logging.basicConfig(level=logging.INFO)
 
-    parser = argparse.ArgumentParser(description='Arguments for traning p4ip.')
-    parser.add_argument('--n_epoch', type=int, default=10)
+    parser = argparse.ArgumentParser(description='Arguments for traning P4IP.')
+    parser.add_argument('--n_epochs', type=int, default=10)
     parser.add_argument('--n_iters', type=int, default=8)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--train_val_split', type=float, default=0.857)
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--load_pretrain', type=bool, default=True)
+    parser.add_argument('--load_pretrain', type=bool, default=False)
     opt = parser.parse_args()
 
-    train_p4ip( n_epochs=opt.n_epoch,
+    train_P4IP( n_epochs=opt.n_epochs,
                 n_iters=opt.n_iters,
                 lr=opt.lr,
                 train_val_split=opt.train_val_split,
                 batch_size=opt.batch_size,
                 load_pretrain=opt.load_pretrain,
                 model_save_path='./saved_models/',
-                pretrained_file='./saved_models/p4ip_100epoch.pth')
+                pretrained_file='./saved_models/P4IP_100epoch.pth')
