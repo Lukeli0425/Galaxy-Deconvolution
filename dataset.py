@@ -92,6 +92,7 @@ class Galaxy_Dataset(Dataset):
             # Galaxy parameters 
             rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
             sky_level = 2.5e4                   # ADU / arcsec^2
+            psf_flux = 1.e7
             gal_flux = 1.e5                     # arbitrary choice, makes nice (not too) noisy images
             gal_e = rng() * self.gal_max_shear  # shear of galaxy
             gal_beta = 2. * np.pi * rng()       # radians
@@ -117,6 +118,9 @@ class Galaxy_Dataset(Dataset):
             opt_obscuration = 0.165             # linear scale size of secondary mirror obscuration $(3.4/8.36)^2$
             lam = 700                           # nm    NB: don't use lambda - that's a reserved word.
             tel_diam = 8.36                     # telescope diameter / meters (8.36 for LSST)
+            # CCD parameters
+            read_noise = 9. # e-
+            gain = 0.34 # e-/ADU
 
             # Read out real galaxy from catalog
             gal_ori = galsim.RealGalaxy(self.real_galaxy_catalog, index = idx, flux = gal_flux)
@@ -131,7 +135,7 @@ class Galaxy_Dataset(Dataset):
             
             # Simulated PSF (optical + atmospgeric)
             # Define the atmospheric component of PSF
-            atmos = galsim.Kolmogorov(fwhm=atmos_fwhm) # Note: the flux here is the default flux=1.
+            atmos = galsim.Kolmogorov(fwhm=atmos_fwhm, flux=np.sqrt(psf_flux)) # Note: the flux here is the default flux=1.
             atmos = atmos.shear(e=atmos_e, beta=atmos_beta*galsim.radians)
             # Define the optical component of PSF
             lam_over_diam = lam * 1.e-9 / tel_diam # radians
@@ -140,9 +144,10 @@ class Galaxy_Dataset(Dataset):
                                         defocus = opt_defocus,
                                         coma1 = opt_c1, coma2 = opt_c2,
                                         astig1 = opt_a1, astig2 = opt_a2,
-                                        obscuration = opt_obscuration)
+                                        obscuration = opt_obscuration,
+                                        flux=np.sqrt(psf_flux))
             
-            psf = galsim.Convolve([atmos, optics])
+            psf = galsim.Convolve([atmos, optics], real_space=True)
             final = galsim.Convolve([psf, gal]) # Make the combined profile
             # Offset by up to 1/2 pixel in each direction
             dx = rng() - 0.5
@@ -159,7 +164,9 @@ class Galaxy_Dataset(Dataset):
             gal_image += sky_level * (self.pixel_scale**2)
             # gal_image.addNoise(galsim.PoissonNoise(rng)) # no noise for ground truth
             obs += sky_level * (self.pixel_scale**2) # Add a constant background level
-            obs.addNoise(galsim.PoissonNoise(rng)) # add noise for observation
+            obs.addNoise(galsim.CCDNoise(rng, sky_level=0, gain=gain, read_noise=read_noise)) # add noise for observation
+            psf_image += sky_level * (self.pixel_scale**2) # Add a constant background level
+            psf_image.addNoise(galsim.CCDNoise(rng, sky_level=0, gain=gain, read_noise=read_noise)) # add noise for observation
 
             # Save images
             psnr = PSNR(obs.array, gal_image.array)
@@ -227,4 +234,4 @@ def get_dataloader(train_test_split=0.857, batch_size=32):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    dataset = Galaxy_Dataset(I=23.5)
+    dataset = Galaxy_Dataset(I=23.5, data_path='./dataset_noisy_psf')
