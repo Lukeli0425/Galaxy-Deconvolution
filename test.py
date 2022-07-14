@@ -13,14 +13,14 @@ from utils import PSNR, estimate_shear
 
 class p4ip_deconvolver:
     """Wrapper class for P4IP deconvolution."""
-    def __init__(self, model_path='./saved_models/p4ip_10.pth'):
-        self.model_path = model_path
+    def __init__(self, model_file='./saved_models/p4ip_10.pth'):
+        self.model_file = model_file
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = P4IP_Net(n_iters=8)
         self.model.to(self.device)
         # Load the p4ip model
         try:
-            self.model.load_state_dict(torch.load(model_path, map_location=torch.device(self.device)))
+            self.model.load_state_dict(torch.load(model_file, map_location=torch.device(self.device)))
         except:
             logging.raiseExceptions('Failed loading P4IP model!')
 
@@ -137,7 +137,7 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
 
     return results
 
-def test_shear(result_path='./results/p4ip/', results_file='p4ip_results.json', I=23.5):
+def test_shear(model_file='./saved_models/P4IP_20.pth', result_path='./results/p4ip/', results_file='p4ip_results.json', I=23.5):
     """Estimate shear"""
     test_dataset = Galaxy_Dataset(train=False, I=I, data_path='./dataset_noisy_psf/')
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
@@ -155,7 +155,7 @@ def test_shear(result_path='./results/p4ip/', results_file='p4ip_results.json', 
     except:
         results = {}
 
-    p4ip = p4ip_deconvolver()
+    p4ip = p4ip_deconvolver(model_file=model_file)
     for idx, ((obs, psf, M), gt) in enumerate(test_loader):
         with torch.no_grad():
             
@@ -232,7 +232,6 @@ def test_shear(result_path='./results/p4ip/', results_file='p4ip_results.json', 
         json.dump(results, f)
     logging.info(f"Shear estimation results saved to {results_file}.")
     
-    
     return results
 
 
@@ -242,10 +241,7 @@ if __name__ =="__main__":
     
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
+        
 
     # test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_models/p4ip_10.pth')
     test_shear(result_path='./results/p4ip_noisy_psf/')
-    # a = np.array([(1,2), (3,4)])
-    # b = np.array([(1,1), (1,1)])
-    # print(a.tolist())
-    # print(np.sqrt(np.mean(a, axis=0)))
