@@ -31,7 +31,7 @@ def estimate_shear(obs, psf=None, use_psf=False):
     rcut = 24
     if not use_psf: # Use delta for PSF if not given, equivalent to no deconvolution
         psf = np.zeros(obs.shape)
-        psf[int(obs.shape[0]/2), int(obs.shape[1]/2)] = 1
+        psf[np.int(obs.shape[0]/2)+1, np.int(obs.shape[1]/2)+1] = 1
     else: # Crop out PSF
         # beg = psf.shape[0]//2 - rcut
         # end = beg + 2*rcut + 1
