@@ -58,7 +58,7 @@ def train_P4IP( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_si
     if not os.path.exists(model_save_path):
         os.mkdir(model_save_path)
     torch.save(model.state_dict(), os.path.join(model_save_path, f'P4IP_{n_epochs}.pth'))
-    logging.info(f'Pip4 model saved to {os.path.join(model_save_path, f"P4IP_{n_epochs}.pth")}')
+    logging.info(f'P4IP model saved to {os.path.join(model_save_path, f"P4IP_{n_epochs}.pth")}')
 
     return
 
