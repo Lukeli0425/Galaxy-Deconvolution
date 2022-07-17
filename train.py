@@ -57,8 +57,8 @@ def train_P4IP( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_si
     
     if not os.path.exists(model_save_path):
         os.mkdir(model_save_path)
-    torch.save(model.state_dict(), os.path.join(model_save_path, f'P4IP_{n_epochs}.pth'))
-    logging.info(f'P4IP model saved to {os.path.join(model_save_path, f"P4IP_{n_epochs}.pth")}')
+    torch.save(model.state_dict(), os.path.join(model_save_path, f'P4IP_{n_epochs}epochs.pth'))
+    logging.info(f'P4IP model saved to {os.path.join(model_save_path, f"P4IP_{n_epochs}epochs.pth")}')
 
     return
 
@@ -68,7 +68,7 @@ if __name__ =="__main__":
     parser = argparse.ArgumentParser(description='Arguments for traning P4IP.')
     parser.add_argument('--n_epochs', type=int, default=10)
     parser.add_argument('--n_iters', type=int, default=8)
-    parser.add_argument('--lr', type=float, default=2e-4)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--train_val_split', type=float, default=0.857)
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--load_pretrain', type=bool, default=False)

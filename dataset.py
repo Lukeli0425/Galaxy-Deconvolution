@@ -119,6 +119,8 @@ class Galaxy_Dataset(Dataset):
             opt_obscuration = 0.165             # linear scale size of secondary mirror obscuration $(3.4/8.36)^2$
             lam = 700                           # nm    NB: don't use lambda - that's a reserved word.
             tel_diam = 8.36                     # telescope diameter / meters (8.36 for LSST)
+            # psf_beta = 3
+            # psf_trunc= 2 * atmos_fwhm
             # CCD parameters
             read_noise = 9. # e-
             gain = 0.34 # e-/ADU

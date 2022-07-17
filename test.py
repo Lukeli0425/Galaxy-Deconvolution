@@ -13,7 +13,7 @@ from utils import PSNR, estimate_shear
 
 class p4ip_deconvolver:
     """Wrapper class for P4IP deconvolution."""
-    def __init__(self, model_file='./saved_models/p4ip_10.pth'):
+    def __init__(self, model_file='./saved_models/P4IP_20.pth'):
         self.model_file = model_file
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = P4IP_Net(n_iters=8)
@@ -158,9 +158,10 @@ def test_shear(model_file='./saved_models/P4IP_20.pth', result_path='./results/p
     p4ip = p4ip_deconvolver(model_file=model_file)
     for idx, ((obs, psf, M), gt) in enumerate(test_loader):
         with torch.no_grad():
-            
-            # rec = io.imread(os.path.join('./results/p4ip/rec/', f"rec_{I}_{idx}.tiff"))
-            rec = p4ip.deconvolve(obs, psf)
+            try:
+                rec = io.imread(os.path.join(result_path, 'rec/', f"rec_{I}_{idx}.tiff"))
+            except:
+                rec = p4ip.deconvolve(obs, psf)
             gt = gt.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
             psf = psf.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
             obs = obs.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
@@ -196,25 +197,25 @@ def test_shear(model_file='./saved_models/P4IP_20.pth', result_path='./results/p
     ))
     
     # Plot the error
-    plt.figure(figsize=(16,4))
+    plt.figure(figsize=(15,4.2))
     plt.subplot(1,3,1)
     plt.plot((obs_shear - gt_shear)[:,0], (obs_shear - gt_shear)[:,1],'.')
-    plt.xlabel('$\sigma_1$', fontsize=13)
-    plt.ylabel('$\sigma_2$', fontsize=13)
+    plt.xlabel('$e_1$', fontsize=13)
+    plt.ylabel('$e_2$', fontsize=13)
     plt.xlim([-0.8,0.8])
     plt.ylim([-0.8,0.8])
     plt.title('Observed Galaxy', fontsize=13)
     plt.subplot(1,3,2)
     plt.plot((rec_shear - gt_shear)[:,0], (rec_shear - gt_shear)[:,1],'.')
-    plt.xlabel('$\sigma_1$', fontsize=13)
-    plt.ylabel('$\sigma_2$', fontsize=13)
+    plt.xlabel('$e_1$', fontsize=13)
+    plt.ylabel('$e_2$', fontsize=13)
     plt.xlim([-0.8,0.8])
     plt.ylim([-0.8,0.8])
     plt.title('P4IP Recovered Galaxy', fontsize=13)
     plt.subplot(1,3,3)
     plt.plot((fpfs_shear - gt_shear)[:,0], (fpfs_shear - gt_shear)[:,1],'.')
-    plt.xlabel('$\sigma_1$', fontsize=13)
-    plt.ylabel('$\sigma_2$', fontsize=13)
+    plt.xlabel('$e_1$', fontsize=13)
+    plt.ylabel('$e_2$', fontsize=13)
     plt.xlim([-0.8,0.8])
     plt.ylim([-0.8,0.8])
     plt.title('Fourier Power Spectrum Deconvolution', fontsize=13)
@@ -242,6 +243,5 @@ if __name__ =="__main__":
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
         
-
-    # test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_models/p4ip_10.pth')
+    # test_p4ip(n_iters=8, result_path='./results/p4ip_noisy_psf/', model_path='./saved_models/P4IP_30epochs.pth')
     test_shear(result_path='./results/p4ip_noisy_psf/')
