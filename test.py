@@ -155,51 +155,62 @@ def test_shear(model_file='./saved_models/P4IP_20.pth', result_path='./results/p
             obs = obs.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
 
             # Calculate shear
-            
-            gt_shear.append(estimate_shear(gt))
-            obs_shear.append(estimate_shear(obs))
-            rec_shear.append(estimate_shear(rec))
             try:
                 fpfs_shear.append(estimate_shear(obs, psf, use_psf=True))
-                if abs(fpfs_shear[-1][0]) > 10 or abs(fpfs_shear[-1][1]) > 10:
-                    gt_shear.pop()
-                    obs_shear.pop()
-                    rec_shear.pop()
+                if abs(fpfs_shear[-1][0]) + abs(fpfs_shear[-1][1]) > 10:
                     fpfs_shear.pop()
+                else:
+                    gt_shear.append(estimate_shear(gt))
+                    obs_shear.append(estimate_shear(obs))
+                    rec_shear.append(estimate_shear(rec))
+                    logging.info('Estimating shear: [{}/{}]  gt:({:.3f},{:.3f})  obs:({:.3f},{:.3f})  rec:({:.3f},{:.3f})  fpfs:({:.3f},{:.3f})'.format(
+                        idx+1, len(test_loader),
+                        gt_shear[-1][0], gt_shear[-1][1],
+                        obs_shear[-1][0], obs_shear[-1][1],
+                        rec_shear[-1][0], rec_shear[-1][1],
+                        fpfs_shear[-1][0], fpfs_shear[-1][1]))
             except:
-                # fpfs_shear.append(estimate_shear(obs))
-                gt_shear.pop()
-                obs_shear.pop()
-                rec_shear.pop()
-            logging.info('Estimating shear: [{}/{}]  gt:({:.3f},{:.3f})  obs:({:.3f},{:.3f})  rec:({:.3f},{:.3f})  fpfs:({:.3f},{:.3f})'.format(
-                idx+1, len(test_loader),
-                gt_shear[-1][0], gt_shear[-1][1],
-                obs_shear[-1][0], obs_shear[-1][1],
-                rec_shear[-1][0], rec_shear[-1][1],
-                fpfs_shear[-1][0], fpfs_shear[-1][1]
-                ))
-            
+                pass
     gt_shear = np.array(gt_shear)
     obs_shear = np.array(obs_shear)
     rec_shear = np.array(rec_shear)
     fpfs_shear = np.array(fpfs_shear)
-    obs_shear_err = np.sqrt(np.mean((obs_shear - gt_shear)**2, axis=0))
-    rec_shear_err = np.sqrt(np.mean((rec_shear - gt_shear)**2, axis=0))
-    fpfs_shear_err = np.sqrt(np.mean((fpfs_shear - gt_shear)**2, axis=0))
-    logging.info('Shear error ({:.5f},{:.5f}) -> ({:.5f},{:.5f})   fpfs:({:.5f},{:.5f})'.format(
-        obs_shear_err[0], obs_shear_err[1],
-        rec_shear_err[0], rec_shear_err[1],
-        fpfs_shear_err[0], fpfs_shear_err[1]
-    ))
+    obs_err_mean = np.mean(abs(obs_shear - gt_shear))
+    rec_err_mean = np.mean(abs(rec_shear - gt_shear))
+    fpfs_err_mean = np.mean(abs(fpfs_shear - gt_shear))
+    obs_err_median = np.median(abs(obs_shear - gt_shear))
+    rec_err_median = np.median(abs(rec_shear - gt_shear))
+    fpfs_err_median = np.median(abs(fpfs_shear - gt_shear))
+    obs_err_rms = np.sqrt(np.mean((obs_shear - gt_shear)**2, axis=0))
+    rec_err_rms = np.sqrt(np.mean((rec_shear - gt_shear)**2, axis=0))
+    fpfs_err_rms = np.sqrt(np.mean((fpfs_shear - gt_shear)**2, axis=0))
+    logging.info('Shear error (mean): ({:.5f},{:.5f}) -> ({:.5f},{:.5f})   fpfs:({:.5f},{:.5f})'.format(
+        obs_err_mean[0], obs_err_mean[1],
+        rec_err_mean[0], rec_err_mean[1],
+        fpfs_err_mean[0], fpfs_err_mean[1]))
+    logging.info('Shear error (median): ({:.5f},{:.5f}) -> ({:.5f},{:.5f})   fpfs:({:.5f},{:.5f})'.format(
+        obs_err_median[0], obs_err_median[1],
+        rec_err_median[0], rec_err_median[1],
+        fpfs_err_median[0], fpfs_err_median[1]))
+    logging.info('Shear error (RMS): ({:.5f},{:.5f}) -> ({:.5f},{:.5f})   fpfs:({:.5f},{:.5f})'.format(
+        obs_err_rms[0], obs_err_rms[1],
+        rec_err_rms[0], rec_err_rms[1],
+        fpfs_err_rms[0], fpfs_err_rms[1]))
     
     # Save shear estimation
     results['gt_shear'] = gt_shear.tolist()
     results['obs_shear'] = obs_shear.tolist()
     results['rec_shear'] = rec_shear.tolist()
     results['fpfs_shear'] = fpfs_shear.tolist()
-    results['obs_shear_err'] = obs_shear_err.tolist()
-    results['rec_shear_err'] = rec_shear_err.tolist()
-    results['fpfs_shear_err'] = fpfs_shear_err.tolist()
+    results['obs_err_mean'] = obs_err_mean.tolist()
+    results['rec_err_mean'] = rec_err_mean.tolist()
+    results['fpfs_err_mean'] = fpfs_err_mean.tolist()
+    results['obs_err_median'] = obs_err_median.tolist()
+    results['rec_err_median'] = rec_err_median.tolist()
+    results['fpfs_err_median'] = fpfs_err_median.tolist()
+    results['obs_err_rms'] = obs_err_rms.tolist()
+    results['rec_err_rms'] = rec_err_rms.tolist()
+    results['fpfs_err_rms'] = fpfs_err_rms.tolist()
     with open(os.path.join(result_path, results_file), 'w') as f:
         json.dump(results, f)
     logging.info(f"Shear estimation results saved to {results_file}.")
@@ -255,7 +266,6 @@ def plot_results(result_path='./results/p4ip_noisy_psf/', results_file='p4ip_res
     idx = z.argsort()
     x, y, z = x[idx], y[idx], z[idx]
     plt.scatter(x, y, c=z, s=5, cmap='Spectral_r')
-    # plt.plot((rec_shear - gt_shear)[:,0], (rec_shear - gt_shear)[:,1],'.')
     plt.xlabel('$e_1$', fontsize=13)
     plt.ylabel('$e_2$', fontsize=13)
     plt.xlim([-0.8,0.8])
@@ -272,8 +282,6 @@ def plot_results(result_path='./results/p4ip_noisy_psf/', results_file='p4ip_res
     plt.scatter(x, y, c=z, s=5, cmap='Spectral_r')
     plt.xlabel('$e_1$', fontsize=13)
     plt.ylabel('$e_2$', fontsize=13)
-    # plt.xlim([-2,2])
-    # plt.ylim([-2,2])
     plt.xlim([-0.8,0.8])
     plt.ylim([-0.8,0.8])
     plt.title('Fourier Power Spectrum Deconvolution', fontsize=13)
