@@ -28,7 +28,6 @@ def PSNR(img1, img2, normalize=True):
 
 def estimate_shear(obs, psf=None, use_psf=False):
     """Estimate shear from input 2D image."""
-    rcut = 24
     if not use_psf: # Use delta for PSF if not given, equivalent to no deconvolution
         psf = np.zeros(obs.shape)
         psf[np.int(obs.shape[0]/2)+1, np.int(obs.shape[1]/2)+1] = 1
@@ -51,7 +50,7 @@ def estimate_shear(obs, psf=None, use_psf=False):
     g_1 = ells['fpfs_e1'][0] / resp
     g_2 = ells['fpfs_e2'][0] / resp
 
-    return (g_1, g_2)
+    return (g_1, g_2) 
 
 
 if __name__ == "__main__":
