@@ -272,8 +272,10 @@ def plot_results(result_path='./results/p4ip_noisy_psf/', results_file='p4ip_res
     plt.scatter(x, y, c=z, s=5, cmap='Spectral_r')
     plt.xlabel('$e_1$', fontsize=13)
     plt.ylabel('$e_2$', fontsize=13)
-    plt.xlim([-2,2])
-    plt.ylim([-2,2])
+    # plt.xlim([-2,2])
+    # plt.ylim([-2,2])
+    plt.xlim([-0.8,0.8])
+    plt.ylim([-0.8,0.8])
     plt.title('Fourier Power Spectrum Deconvolution', fontsize=13)
     plt.savefig(os.path.join(result_path, 'p4ip_shear_err.jpg'), bbox_inches='tight')
 
@@ -287,5 +289,5 @@ if __name__ =="__main__":
         os.mkdir('./results/')
         
     # test_p4ip(n_iters=8, result_path='./results/p4ip_noisy_psf/', model_path='./saved_models/P4IP_30epochs.pth')
-    test_shear(result_path='./results/p4ip_noisy_psf/')
+    # test_shear(result_path='./results/p4ip_noisy_psf/')
     plot_results(result_path='./results/p4ip_noisy_psf/', results_file='p4ip_results.json')
