@@ -149,7 +149,7 @@ def test_shear(model_file='./saved_models/P4IP_20.pth', result_path='./results/p
     if not os.path.exists(result_path):
         os.mkdir(result_path)
     try:
-        with open(result_path, results_file, 'r') as f:
+        with open(os.path.join(result_path, results_file), 'r') as f:
             results = json.load(f)
         logging.warning('Failed loading in {results_file}.')
     except:
@@ -229,7 +229,7 @@ def test_shear(model_file='./saved_models/P4IP_20.pth', result_path='./results/p
     results['obs_shear_err'] = obs_shear_err.tolist()
     results['rec_shear_err'] = rec_shear_err.tolist()
     results['fpfs_shear_err'] = fpfs_shear_err.tolist()
-    with open(results_file, 'w') as f:
+    with open(os.path.join(result_path, results_file), 'w') as f:
         json.dump(results, f)
     logging.info(f"Shear estimation results saved to {results_file}.")
     
