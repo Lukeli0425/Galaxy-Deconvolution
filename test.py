@@ -121,19 +121,19 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
         json.dump(results, f)
     logging.info(f"Test results saved to {results_file}.")
 
-    # Plot results
-    with open(results_file, 'r') as f:
-        results = json.load(f)
-    obs_psnr = results['obs_psnr']
-    rec_psnr = results['rec_psnr']
-    plt.figure(figsize=(10,10))
-    plt.plot([10,35],[10,35],'r') # plt y=x line
-    plt.plot(obs_psnr, rec_psnr, '.')
-    plt.title('PSNR of P4IP Test Results', fontsize=18)
-    plt.xlabel('PSNR of Observed Galaxies', fontsize=15)
-    plt.ylabel('PSNR of Recovered Galaxies', fontsize=15)
-    plt.savefig(os.path.join(result_path, 'p4ip_psnr.jpg'), bbox_inches='tight')
-    plt.close()
+    # # Plot results
+    # with open(results_file, 'r') as f:
+    #     results = json.load(f)
+    # obs_psnr = results['obs_psnr']
+    # rec_psnr = results['rec_psnr']
+    # plt.figure(figsize=(10,10))
+    # plt.plot([10,35],[10,35],'r') # plt y=x line
+    # plt.plot(obs_psnr, rec_psnr, '.')
+    # plt.title('PSNR of P4IP Test Results', fontsize=18)
+    # plt.xlabel('PSNR of Observed Galaxies', fontsize=15)
+    # plt.ylabel('PSNR of Recovered Galaxies', fontsize=15)
+    # plt.savefig(os.path.join(result_path, 'p4ip_psnr.jpg'), bbox_inches='tight')
+    # plt.close()
 
     return results
 
@@ -149,7 +149,7 @@ def test_shear(model_file='./saved_models/P4IP_20.pth', result_path='./results/p
     if not os.path.exists(result_path):
         os.mkdir(result_path)
     try:
-        with open(result_path, results_file, 'r') as f:
+        with open(os.path.join(result_path, results_file), 'r') as f:
             results = json.load(f)
         logging.warning('Failed loading in {results_file}.')
     except:
@@ -235,6 +235,60 @@ def test_shear(model_file='./saved_models/P4IP_20.pth', result_path='./results/p
     
     return results
 
+def plot_results(result_path='./results/p4ip_noisy_psf/', results_file='p4ip_results.json'):
+    if not os.path.exists(result_path):
+        os.mkdir(result_path)
+    try:
+        with open(os.path.join(result_path, results_file), 'r') as f:
+            results = json.load(f)
+    except:
+        logging.raiseExceptions('Failed loading in {results_file}.')
+
+    # Plot PSNR
+    obs_psnr = results['obs_psnr']
+    rec_psnr = results['rec_psnr']
+    plt.figure(figsize=(10,10))
+    plt.plot([10,35],[10,35],'r') # plt y=x line
+    plt.plot(obs_psnr, rec_psnr, '.')
+    plt.title('PSNR of P4IP Test Results', fontsize=18)
+    plt.xlabel('PSNR of Observed Galaxies', fontsize=15)
+    plt.ylabel('PSNR of Recovered Galaxies', fontsize=15)
+    plt.savefig(os.path.join(result_path, 'p4ip_psnr.jpg'), bbox_inches='tight')
+    plt.close()
+
+    # Plot the error
+    gt_shear = np.array(results['gt_shear'])
+    obs_shear = np.array(results['obs_shear'])
+    rec_shear = np.array(results['rec_shear'])
+    fpfs_shear = np.array(results['fpfs_shear'])
+    obs_shear_err = np.array(results['obs_shear_err'])
+    rec_shear_err = np.array(results['rec_shear_err'])
+    fpfs_shear_err = np.array(results['fpfs_shear_err'])
+    plt.figure(figsize=(15,4.2))
+    plt.subplot(1,3,1)
+    plt.plot((obs_shear - gt_shear)[:,0], (obs_shear - gt_shear)[:,1],'.')
+    plt.xlabel('$e_1$', fontsize=13)
+    plt.ylabel('$e_2$', fontsize=13)
+    plt.xlim([-0.8,0.8])
+    plt.ylim([-0.8,0.8])
+    plt.title('Observed Galaxy', fontsize=13)
+    plt.subplot(1,3,2)
+    plt.plot((rec_shear - gt_shear)[:,0], (rec_shear - gt_shear)[:,1],'.')
+    plt.xlabel('$e_1$', fontsize=13)
+    plt.ylabel('$e_2$', fontsize=13)
+    plt.xlim([-0.8,0.8])
+    plt.ylim([-0.8,0.8])
+    plt.title('P4IP Recovered Galaxy', fontsize=13)
+    plt.subplot(1,3,3)
+    plt.plot((fpfs_shear - gt_shear)[:,0], (fpfs_shear - gt_shear)[:,1],'.')
+    plt.xlabel('$e_1$', fontsize=13)
+    plt.ylabel('$e_2$', fontsize=13)
+    plt.xlim([-0.8,0.8])
+    plt.ylim([-0.8,0.8])
+    plt.title('Fourier Power Spectrum Deconvolution', fontsize=13)
+    plt.savefig(os.path.join(result_path, 'p4ip_shear_err.jpg'), bbox_inches='tight')
+
+
 
 
 if __name__ =="__main__":
@@ -244,4 +298,5 @@ if __name__ =="__main__":
         os.mkdir('./results/')
         
     # test_p4ip(n_iters=8, result_path='./results/p4ip_noisy_psf/', model_path='./saved_models/P4IP_30epochs.pth')
-    test_shear(result_path='./results/p4ip_noisy_psf/')
+    # test_shear(result_path='./results/p4ip_noisy_psf/')
+    plot_results(result_path='./results/p4ip_noisy_psf/', results_file='p4ip_results.json')
