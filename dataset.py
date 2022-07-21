@@ -93,7 +93,6 @@ class Galaxy_Dataset(Dataset):
             # Galaxy parameters 
             rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
             sky_level = 2.5e4                   # ADU / arcsec^2
-            psf_flux = 1.e5
             gal_flux = 1.e5                     # arbitrary choice, makes nice (not too) noisy images
             gal_e = rng() * self.gal_max_shear  # shear of galaxy
             gal_beta = 2. * np.pi * rng()       # radians
@@ -102,6 +101,7 @@ class Galaxy_Dataset(Dataset):
             gal_mu = 1 + rng() * 0.1            # mu = ((1-kappa)^2 - g1^2 - g2^2)^-1 (1.082)
             theta = 2. * np.pi * rng()          # radians
             # PSF parameters
+            psf_flux = 1.e5
             rng_gaussian = galsim.GaussianDeviate(seed=random_seed+k+1, mean=self.seeing, sigma=0.18)
             atmos_fwhm = 0 # arcsec (mean 0.7 for LSST)
             while atmos_fwhm < 0.35 or atmos_fwhm > 1.1: # sample fwhm
