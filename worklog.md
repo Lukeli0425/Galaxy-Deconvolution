@@ -48,4 +48,24 @@
 1. Low rank galaxy: [paper](https://arxiv.org/abs/1703.02305)
 2. Weak Lensing pipeline _ShapePipe_: [paper](https://arxiv.org/abs/2206.14689)
 3. Author of the papers above: [Samuel Farrens](https://sfarrens.github.io/about.html), works on PSF deconvolution, weak lensing and image restoration.
+---
 
+## Week 3 (7.12 - 7.18)
+
+
+
+
+---
+
+## Week 4 (7.19 - 7.25)
+**Meeting with Emma**
+1. Fixed FPFS bug and plot shear error density distribution.
+![error distribution](results/p4ip_noisy_psf/p4ip_shear_err.jpg)
+2. Find more information on PSF interpolation.
+3. Find out how much the low-rank method could sppeed up and how many ranks should be kept to maintain performance.
+4. look for information on [undergrad pre](https://project.lsst.org/meetings/rubin2022/agenda/undergraduate-student-poster-session-research-related-rubinlsst) at Rubin.
+
+**7.21**
+1. Wrote demo notebook on image simulation.
+
+**7.22**
