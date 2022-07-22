@@ -2,7 +2,7 @@
 
 ## Week 0 ( - 6.27)
 
-**Meeting with Emma**
+**6.27 Meeting with Emma**
 1. Report summary of atmosphere effects.
 2. EA TODO: low rank decomposition sources, [Frank Ong's work](https://people.eecs.berkeley.edu/~mlustig/).
 3. TL TODO: do deconv comparison (long exposure w/ long exposure PSF, SE with correct SE PSF, incorrect SE PSF, LE PSF), perhaps of a few different deconv methods, THEN EA reach out to Adam Miller.
@@ -27,7 +27,7 @@
 
     PSNR: 23.41 -> 30.01
 
-**Meeting with Emma**
+**7.4 Meeting with Emma**
 1. Report image simulation process and results on unrolled ADMM
 2. Read **low rank** paper: [MiniScope3D](https://www.nature.com/articles/s41377-020-00403-7.epdf?sharing_token=nK5gCxZK1t5FggfHywi1n9RgN0jAjWel9jnR3ZoTv0NQp7nPZsE-AeCQRwJXW5xP7zCxf5QqwKHkKkkw6wSKpXeaEpZrAsG9aQTUSvla5AoZ3nd9_KDJojiAsEvZrvxXYzvxWbakIjOfIhsFi2hH5HC8kS3XjHjc6oH2SYbPVYE%3D) & [DiffuserCam]
 3. Nick Antipa, 7 am China time availability.
@@ -54,16 +54,15 @@
 
 
 
-
----
-
-## Week 4 (7.19 - 7.25)
-**Meeting with Emma**
+**7.18 Meeting with Emma**
 1. Fixed FPFS bug and plot shear error density distribution.
 ![error distribution](results/p4ip_noisy_psf/p4ip_shear_err.jpg)
 2. Find more information on PSF interpolation.
 3. Find out how much the low-rank method could sppeed up and how many ranks should be kept to maintain performance.
 4. look for information on [undergrad pre](https://project.lsst.org/meetings/rubin2022/agenda/undergraduate-student-poster-session-research-related-rubinlsst) at Rubin.
+---
+
+## Week 4 (7.19 - 7.25)
 
 **7.21**
 1. Wrote demo notebook on image simulation.
