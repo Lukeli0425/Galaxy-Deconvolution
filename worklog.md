@@ -65,6 +65,6 @@
 ## Week 4 (7.19 - 7.25)
 
 **7.21**
-1. Wrote demo notebook on image simulation.
+~~1. Wrote demo notebook on image simulation.~~
 
 **7.22**
