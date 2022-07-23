@@ -169,7 +169,7 @@ class Galaxy_Dataset(Dataset):
             obs += sky_level * (self.pixel_scale**2) # Add a constant background level
             obs.addNoise(galsim.CCDNoise(rng, gain=gain, read_noise=read_noise)) # add noise for observation
             # obs.addNoise(galsim.PoissonNoise(rng))
-            psf_image += psf_image*psf_flux + sky_level * (self.pixel_scale**2) # Add a constant background level
+            psf_image = psf_image*psf_flux + sky_level * (self.pixel_scale**2) # Add a constant background level
             psf_image.addNoise(galsim.CCDNoise(rng, gain=gain, read_noise=read_noise)) # add noise for observation
             # psf_image.addNoise(galsim.PoissonNoise(rng))
 
