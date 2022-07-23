@@ -240,4 +240,4 @@ def get_dataloader(train_test_split=0.857, batch_size=32):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
-    dataset = Galaxy_Dataset(I=25.2, data_path='./dataset/')
+    dataset = Galaxy_Dataset(COSMOS_path='/mnt/WD6TB/tianaoli/', I=25.2, data_path='./dataset/')
