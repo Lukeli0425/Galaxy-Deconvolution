@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import argparse
 import numpy as np
 from skimage import io
 import torch
@@ -240,4 +241,8 @@ def get_dataloader(train_test_split=0.857, batch_size=32):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
-    dataset = Galaxy_Dataset(COSMOS_path='/mnt/WD6TB/tianaoli/', I=25.2, data_path='./dataset/')
+    parser = argparse.ArgumentParser(description='Arguments for dataset.')
+    parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
+    opt = parser.parse_args()
+    
+    dataset = Galaxy_Dataset(COSMOS_path='/mnt/WD6TB/tianaoli/', I=opt.I, data_path='./dataset/')
