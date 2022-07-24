@@ -301,6 +301,6 @@ if __name__ =="__main__":
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
         
-    # test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_models/P4IP_30epochs.pth')
-    # test_shear(result_path='./results/p4ip/')
-    plot_results(result_path='./results/p4ip/', results_file='p4ip_results.json')
+    test_p4ip(n_iters=8, result_path='./results/p4ip_25.2/', model_path='./saved_models/P4IP_30epochs.pth')
+    test_shear(result_path='./results/p4ip_25.2/')
+    plot_results(result_path='./results/p4ip_25.2/', results_file='p4ip_results.json')
