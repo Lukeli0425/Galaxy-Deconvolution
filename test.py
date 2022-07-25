@@ -11,11 +11,12 @@ from models.network_p4ip import P4IP_Net
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 from utils import PSNR, estimate_shear
 from scipy.stats import gaussian_kde
-from matplotlib.colors import LogNorm
+
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
 class p4ip_deconvolver:
     """Wrapper class for P4IP deconvolution."""
-    def __init__(self, model_file='./saved_models/P4IP_20.pth'):
+    def __init__(self, model_file='./saved_models/P4IP_30epochs.pth'):
         self.model_file = model_file
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = P4IP_Net(n_iters=8)
@@ -38,7 +39,7 @@ class p4ip_deconvolver:
 
         return rec
 
-def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_models/p4ip_10.pth', I=23.5):
+def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_models/P4IP_30epochs.pth', I=23.5):
     """Test the model."""    
     logging.info('Start testing p4ip model.')
     results = {} # dictionary to record the test results
@@ -125,7 +126,7 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
 
     return results
 
-def test_shear(model_file='./saved_models/P4IP_20.pth', result_path='./results/p4ip/', results_file='p4ip_results.json', I=23.5):
+def test_shear(model_file='./saved_models/P4IP_30epochs.pth', result_path='./results/p4ip/', results_file='p4ip_results.json', I=23.5):
     """Estimate shear"""
     test_dataset = Galaxy_Dataset(train=False, I=I, data_path='./dataset/')
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
@@ -302,5 +303,5 @@ if __name__ =="__main__":
         os.mkdir('./results/')
         
     test_p4ip(n_iters=8, result_path='./results/p4ip_25.2/', model_path='./saved_models/P4IP_30epochs.pth', I=25.2)
-    test_shear(result_path='./results/p4ip_25.2/')
+    test_shear(result_path='./results/p4ip_25.2/', I=25.2)
     plot_results(result_path='./results/p4ip_25.2/', results_file='p4ip_results.json')

@@ -13,7 +13,7 @@ from utils import PSNR
 
 class Galaxy_Dataset(Dataset):
     """A galaxy image dataset generated with Galsim."""
-    def __init__(self,  train=True, data_path='./dataset/', train_split = 0.7, n_total=0,
+    def __init__(self,  train=True, data_path='/mnt/WD6TB/tianaoli/dataset/', train_split = 0.7, n_total=0,
                         COSMOS_path='/mnt/WD6TB/tianaoli/', I=23.5, img_size=(48,48),
                         gal_max_shear=0.5, atmos_max_shear=0.2, 
                         pixel_scale=0.2, seeing=0.7):
@@ -245,4 +245,4 @@ if __name__ == "__main__":
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
-    dataset = Galaxy_Dataset(I=opt.I, data_path='./dataset/')
+    dataset = Galaxy_Dataset(I=opt.I)
