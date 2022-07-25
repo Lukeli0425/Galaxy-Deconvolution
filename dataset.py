@@ -14,7 +14,7 @@ from utils import PSNR
 class Galaxy_Dataset(Dataset):
     """A galaxy image dataset generated with Galsim."""
     def __init__(self,  train=True, data_path='./dataset/', train_split = 0.7, n_total=0,
-                        COSMOS_path='./data/', I=23.5, img_size=(48,48),
+                        COSMOS_path='/mnt/WD6TB/tianaoli/', I=23.5, img_size=(48,48),
                         gal_max_shear=0.5, atmos_max_shear=0.2, 
                         pixel_scale=0.2, seeing=0.7):
         logging.info('Constructing dataset.')
@@ -227,9 +227,9 @@ class Galaxy_Dataset(Dataset):
 
         return (obs, psf, M), gt
 
-def get_dataloader(train_test_split=0.857, batch_size=32):
+def get_dataloader(train_test_split=0.857, batch_size=32, I=23.5):
     """Create dataloaders from Galaxy Dataset."""
-    train_dataset = Galaxy_Dataset(train=True)
+    train_dataset = Galaxy_Dataset(train=True, I=I)
     train_size = int(train_test_split * len(train_dataset))
     val_size = len(train_dataset) - train_size
     train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])
@@ -245,4 +245,4 @@ if __name__ == "__main__":
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
-    dataset = Galaxy_Dataset(COSMOS_path='/mnt/WD6TB/tianaoli/', I=opt.I, data_path='./dataset/')
+    dataset = Galaxy_Dataset(I=opt.I, data_path='./dataset/')

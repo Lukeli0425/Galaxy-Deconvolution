@@ -51,7 +51,7 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
     if not os.path.exists(os.path.join(result_path, 'visualization')): # create directory for visualization
         os.mkdir(os.path.join(result_path, 'visualization'))
     
-    test_dataset = Galaxy_Dataset(train=False, I=23.5)
+    test_dataset = Galaxy_Dataset(train=False, I=I)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = P4IP_Net(n_iters=n_iters)
@@ -301,6 +301,6 @@ if __name__ =="__main__":
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
         
-    test_p4ip(n_iters=8, result_path='./results/p4ip_25.2/', model_path='./saved_models/P4IP_30epochs.pth')
+    test_p4ip(n_iters=8, result_path='./results/p4ip_25.2/', model_path='./saved_models/P4IP_30epochs.pth', I=25.2)
     test_shear(result_path='./results/p4ip_25.2/')
     plot_results(result_path='./results/p4ip_25.2/', results_file='p4ip_results.json')
