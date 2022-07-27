@@ -2,6 +2,7 @@
 data/
 dataset/
 dataset_noisy_psf/
+plug_and_play_admm/denoiser.pth
 
 # Vscode setting
 .vscode/
