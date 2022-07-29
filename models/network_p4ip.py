@@ -164,7 +164,7 @@ class P4IP_Net(nn.Module):
 			# U, Z and X updates
 			u = self.U(conv_fft_batch(A,x) + v1, y, rho1, M)
 			z = self.Z(x + v2)
-			x = self.X( conv_fft_batch(At,u - v1), z - v2, AtA_fft, rho1, rho2)
+			x = self.X(conv_fft_batch(At,u - v1), z - v2, AtA_fft, rho1, rho2)
 			# Lagrangian updates			
 			v1 = v1 + conv_fft_batch(A,x) - u
 			v2 = v2 + x - z
