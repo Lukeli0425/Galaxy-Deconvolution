@@ -46,6 +46,7 @@ def pnp_admm(
     v = torch.zeros_like(x)
     for _ in range(num_iter):
         b = cg_rightside(v-u)
+        # b = x_h + step_size*(v-u)
         x = conjugate_gradient(cg_leftside, b, x, max_cgiter, cg_tol)
         v = denoiser(x+u)
         u += (x - v)
