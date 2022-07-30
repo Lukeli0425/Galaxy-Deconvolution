@@ -137,7 +137,7 @@ if __name__ =="__main__":
                         n_iters=opt.n_iters,
                         lr=opt.lr,
                         train_val_split=opt.train_val_split,
-                        batch_size=1,
+                        batch_size=opt.batch_size,
                         load_pretrain=opt.load_pretrain,
                         model_save_path='./saved_models/',
                         pretrained_file='./saved_models/PnP_ADMM_100epoch.pth')
