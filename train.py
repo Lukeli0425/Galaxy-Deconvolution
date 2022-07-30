@@ -2,11 +2,14 @@ import os
 import logging
 import argparse
 import torch
+from torch import nn
 from torch.optim import Adam, SGD
 from dataset import get_dataloader
 from models.network_p4ip import P4IP_Net
 from models.PnP_ADMM import PnP_ADMM
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
+
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
 def train_P4IP( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_size=32,
                 model_save_path='./saved_models/', load_pretrain=False,
@@ -93,7 +96,7 @@ def train_PnP_ADMM( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batc
             train_loss += loss.item()
             
             # evaluate on test dataset
-            if (idx+1) % 50 == 0:
+            if (idx+1) % 10 == 0:
                 test_loss = 0.0
                 model.eval()
                 optimizer.zero_grad()
@@ -121,7 +124,7 @@ if __name__ =="__main__":
 
     parser = argparse.ArgumentParser(description='Arguments for traning P4IP.')
     parser.add_argument('--model', type=str, default='PnP_ADMM', choices=['PnP_ADMM', 'P4IP'])
-    parser.add_argument('--n_epochs', type=int, default=10)
+    parser.add_argument('--n_epochs', type=int, default=20)
     parser.add_argument('--n_iters', type=int, default=8)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--train_val_split', type=float, default=0.857)

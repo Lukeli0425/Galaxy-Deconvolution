@@ -15,7 +15,7 @@ def conv2d_from_kernel(kernel, channels, device=None, stride=1):
     kernel_size = kernel.shape
     kernel = kernel/kernel.sum()
     kernel = kernel.repeat(channels, 1, 1, 1)
-    print(kernel.shape)
+    # print(kernel.shape)
 
     filter = nn.Conv2d(
         in_channels=channels, out_channels=channels,
@@ -37,7 +37,7 @@ def conv2d_from_kernel(kernel, channels, device=None, stride=1):
     return filter, filter_adjoint
 
 class PnP_ADMM(nn.Module):
-    def __init__(self, n_iters=8, max_cgiter=100, cg_tol=1e-7, step_size=1e-4):
+    def __init__(self, n_iters=8, max_cgiter=3, cg_tol=1e-7, step_size=2e-4):
         super(PnP_ADMM, self).__init__()
         self.n_iters = n_iters
         self.max_cgiter = max_cgiter
@@ -48,7 +48,7 @@ class PnP_ADMM(nn.Module):
     
     def forward(self, x, kernel):
         kernel = nn.ReplicationPad2d((0, 1, 0, 1))(kernel).squeeze(dim=0).squeeze(dim=0)
-        print(kernel.shape)
+        # print(kernel.shape)
         filter, filter_adjoint = conv2d_from_kernel(kernel, 1)
         x_h = filter_adjoint(x)
 
@@ -63,8 +63,8 @@ class PnP_ADMM(nn.Module):
                 z = A(d)
                 rr = torch.sum(r**2)
                 alpha = rr/torch.sum(d*z)
-                x += alpha*d
-                r -= alpha*z
+                x = x + alpha*d
+                r = r - alpha*z
                 if torch.norm(r)/torch.norm(b) < tol:
                     break
                 beta = torch.sum(r**2)/rr
@@ -91,6 +91,5 @@ class PnP_ADMM(nn.Module):
             b = cg_rightside(v-u)
             x = conjugate_gradient(cg_leftside, b, x, self.max_cgiter, self.cg_tol)
             v = self.denoiser(x+u)
-            u += (x - v)
-        h,w = v.shape[-2:]
+            u = u + (x - v)
         return v[:,:,24:72,24:72]
