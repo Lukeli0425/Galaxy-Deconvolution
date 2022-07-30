@@ -128,7 +128,7 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
 
 def test_shear(model_file='./saved_models/P4IP_30epochs.pth', result_path='./results/p4ip/', results_file='p4ip_results.json', I=23.5):
     """Estimate shear"""
-    test_dataset = Galaxy_Dataset(train=False, I=I, data_path='./dataset/')
+    test_dataset = Galaxy_Dataset(train=False, I=I)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
     gt_shear = []
@@ -302,6 +302,6 @@ if __name__ =="__main__":
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
         
-    test_p4ip(n_iters=8, result_path='./results/p4ip_25.2/', model_path='./saved_models/P4IP_30epochs.pth', I=25.2)
+    # test_p4ip(n_iters=8, result_path='./results/p4ip_25.2/', model_path='./saved_models/P4IP_30epochs.pth', I=25.2)
     test_shear(result_path='./results/p4ip_25.2/', I=25.2)
     plot_results(result_path='./results/p4ip_25.2/', results_file='p4ip_results.json')

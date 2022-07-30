@@ -15,6 +15,8 @@ def conv2d_from_kernel(kernel, channels, device=None, stride=1):
     kernel_size = kernel.shape
     kernel = kernel/kernel.sum()
     kernel = kernel.repeat(channels, 1, 1, 1)
+    print(kernel.shape)
+
     filter = nn.Conv2d(
         in_channels=channels, out_channels=channels,
         kernel_size=kernel_size, groups=channels, bias=False, stride=stride,
@@ -35,18 +37,20 @@ def conv2d_from_kernel(kernel, channels, device=None, stride=1):
     return filter, filter_adjoint
 
 class PnP_ADMM(nn.Module):
-    def __init__(self, n_iter=8, max_cgiter=100, cg_tol=1e-7, step_size=1e-4):
+    def __init__(self, n_iters=8, max_cgiter=100, cg_tol=1e-7, step_size=1e-4):
         super(PnP_ADMM, self).__init__()
-        self.n_iter = n_iter
+        self.n_iters = n_iters
         self.max_cgiter = max_cgiter
         self.cg_tol = cg_tol
         self.step_size = step_size
+        
         self.denoiser = ResUNet()
     
     def forward(self, x, kernel):
-        filter, filter_adjoint = conv2d_from_kernel(kernel, 3)
-        
-        x_h =  filter_adjoint(x)
+        kernel = nn.ReplicationPad2d((0, 1, 0, 1))(kernel).squeeze(dim=0).squeeze(dim=0)
+        print(kernel.shape)
+        filter, filter_adjoint = conv2d_from_kernel(kernel, 1)
+        x_h = filter_adjoint(x)
 
         def conjugate_gradient(A, b, x0, max_iter, tol):
             """
@@ -83,10 +87,10 @@ class PnP_ADMM(nn.Module):
         u = torch.zeros_like(x)
         v = torch.zeros_like(x)
         
-        for idx in range(self.n_iter):
+        for idx in range(self.n_iters):
             b = cg_rightside(v-u)
             x = conjugate_gradient(cg_leftside, b, x, self.max_cgiter, self.cg_tol)
             v = self.denoiser(x+u)
             u += (x - v)
-            
-        return v
+        h,w = v.shape[-2:]
+        return v[:,:,24:72,24:72]

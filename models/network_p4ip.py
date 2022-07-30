@@ -5,7 +5,6 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import math
 import numpy as np
-from numpy.fft import fft2, ifft2, ifftshift
 
 from models.ResUNet import ResUNet
 from utils_poisson_deblurring.utils_deblur import pad

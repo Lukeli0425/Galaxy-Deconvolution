@@ -82,11 +82,10 @@ def train_PnP_ADMM( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batc
     for epoch in range(n_epochs):
         model.train()
         train_loss = 0.0
-        for idx, ((obs, psf, M), gt) in enumerate(train_loader):
+        for idx, ((obs, psf, _), gt) in enumerate(train_loader):
             optimizer.zero_grad()
-            obs, psf, M, gt = obs.to(device), psf.to(device), M.to(device), gt.to(device)
-            output = model(obs, psf, M)
-            rec = output[-1].squeeze(dim=1) #* M.view(batch_size,1,1)
+            obs, psf,  gt = obs.to(device), psf.to(device), gt.to(device)
+            rec = model(obs, psf).squeeze(dim=1) 
             loss = loss_fn(gt.squeeze(dim=1), rec)
 
             loss.backward()
@@ -135,7 +134,7 @@ if __name__ =="__main__":
                         n_iters=opt.n_iters,
                         lr=opt.lr,
                         train_val_split=opt.train_val_split,
-                        batch_size=opt.batch_size,
+                        batch_size=1,
                         load_pretrain=opt.load_pretrain,
                         model_save_path='./saved_models/',
                         pretrained_file='./saved_models/PnP_ADMM_100epoch.pth')
