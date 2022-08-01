@@ -73,7 +73,7 @@ class U_Update(nn.Module):
 
 	def forward(self, v_tilde, y, rho2, M):
 		t1 = rho2*v_tilde - M 
-		return 0.5*(1/rho2)*( t1 + torch.sqrt( (t1**2)+4*y*rho2))
+		return 0.5*(1/rho2)*(t1 + torch.sqrt(t1**2 + 4*y*rho2))
 
 class Z_Update(nn.Module):
 	"""Updating Z with zero partial derivative."""
