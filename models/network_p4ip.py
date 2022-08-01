@@ -71,18 +71,28 @@ class U_Update(nn.Module):
 	def __init__(self):
 		super(U_Update, self).__init__()
 
-	def forward(self, x, y, rho1, M):
-		t1 = rho1*x - M 
-		return 0.5*(1/rho1)*( t1 + torch.sqrt( (t1**2)+4*y*rho1)  )
+	def forward(self, v_tilde, y, rho2, M):
+		t1 = rho2*v_tilde - M 
+		return 0.5*(1/rho2)*( t1 + torch.sqrt( (t1**2)+4*y*rho2))
+
+class Z_Update(nn.Module):
+	"""Updating Z with zero partial derivative."""
+	def __init__(self):
+		super(Z_Update, self).__init__()		
+
+	def forward(self, z):
+		z_out = self.net(z.float())
+		return z_out
 
 class Z_Update_ResUNet(nn.Module):
+	"""Updating Z with ResUNet as denoiser."""
 	def __init__(self):
 		super(Z_Update_ResUNet, self).__init__()		
 		self.net = ResUNet()
-	
-	def forward(self, x):
-		x_out = self.net(x.float())
-		return x_out
+
+	def forward(self, z):
+		z_out = self.net(z.float())
+		return z_out
 	
 class InitNet(nn.Module):
 	def __init__(self, n):
@@ -119,7 +129,6 @@ class InitNet(nn.Module):
 		rho2_iters = h[:,:,self.n:2*self.n].view(N, 1, 1, self.n)
 		return rho1_iters, rho2_iters
 		
-
 		
 class P4IP_Net(nn.Module):
 	def __init__(self, n_iters=8):
