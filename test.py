@@ -228,21 +228,24 @@ def plot_results(result_path='./results/p4ip/', results_file='p4ip_results.json'
         logging.raiseExceptions('Failed loading in {results_file}.')
 
     # Plot PSNR
-    obs_psnr = np.array(results['obs_psnr'])
-    rec_psnr = np.array(results['rec_psnr'])
-    plt.figure(figsize=(12,10))
-    plt.plot([10,35],[10,35],'r') # plt y=x line
-    xy = np.vstack([obs_psnr, rec_psnr])
-    z = gaussian_kde(xy)(xy)
-    idx = z.argsort()
-    x, y, z = obs_psnr[idx], rec_psnr[idx], z[idx]
-    plt.scatter(x, y, c=z, s=8, cmap='Spectral_r')
-    plt.colorbar()
-    plt.title('PSNR of P4IP Test Results', fontsize=18)
-    plt.xlabel('PSNR of Observed Galaxies', fontsize=15)
-    plt.ylabel('PSNR of Recovered Galaxies', fontsize=15)
-    plt.savefig(os.path.join(result_path, 'p4ip_psnr.jpg'), bbox_inches='tight')
-    plt.close()
+    try:
+        obs_psnr = np.array(results['obs_psnr'])
+        rec_psnr = np.array(results['rec_psnr'])
+        plt.figure(figsize=(12,10))
+        plt.plot([10,35],[10,35],'r') # plt y=x line
+        xy = np.vstack([obs_psnr, rec_psnr])
+        z = gaussian_kde(xy)(xy)
+        idx = z.argsort()
+        x, y, z = obs_psnr[idx], rec_psnr[idx], z[idx]
+        plt.scatter(x, y, c=z, s=8, cmap='Spectral_r')
+        plt.colorbar()
+        plt.title('PSNR of P4IP Test Results', fontsize=18)
+        plt.xlabel('PSNR of Observed Galaxies', fontsize=15)
+        plt.ylabel('PSNR of Recovered Galaxies', fontsize=15)
+        plt.savefig(os.path.join(result_path, 'p4ip_psnr.jpg'), bbox_inches='tight')
+        plt.close()
+    except:
+        logging.warning('No PSNR data found!')
 
     # Plot the error
     gt_shear = np.array(results['gt_shear'])
@@ -302,6 +305,6 @@ if __name__ =="__main__":
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
         
-    # test_p4ip(n_iters=8, result_path='./results/p4ip_25.2/', model_path='./saved_models/P4IP_30epochs.pth', I=25.2)
-    test_shear(result_path='./results/p4ip_25.2/', I=25.2)
-    plot_results(result_path='./results/p4ip_25.2/', results_file='p4ip_results.json')
+    # test_p4ip(n_iters=8, result_path='./results/p4ip_25.2_test/', model_path='./saved_models/P4IP_30epochs.pth', I=25.2)
+    test_shear(result_path='./results/p4ip_25.2_test/', I=25.2)
+    plot_results(result_path='./results/p4ip_25.2_test/', results_file='p4ip_results.json')
