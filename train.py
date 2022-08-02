@@ -123,7 +123,7 @@ if __name__ =="__main__":
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser(description='Arguments for traning P4IP.')
-    parser.add_argument('--model', type=str, default='PnP_ADMM', choices=['PnP_ADMM', 'P4IP'])
+    parser.add_argument('--model', type=str, default='P4IP', choices=['PnP_ADMM', 'P4IP'])
     parser.add_argument('--n_epochs', type=int, default=20)
     parser.add_argument('--n_iters', type=int, default=8)
     parser.add_argument('--lr', type=float, default=1e-4)
