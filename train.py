@@ -22,7 +22,11 @@ def train_P4IP( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_si
     model = P4IP_Net(n_iters=n_iters)
     model.to(device)
     if load_pretrain:
-        model.load_state_dict(torch.load(pretrained_file, map_location=torch.device(device)))
+        try:
+            model.load_state_dict(torch.load(pretrained_file, map_location=torch.device(device)))
+            logging.info(f'Successfully loaded in {pretrained_file}')
+        except:
+            logging.critical(f'Failed loading in {pretrained_file}')
 
     optimizer = Adam(params=model.parameters(), lr = lr)
     loss_fn = MultiScaleLoss()
