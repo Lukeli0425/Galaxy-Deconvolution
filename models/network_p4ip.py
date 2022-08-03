@@ -67,9 +67,9 @@ class X_Update(nn.Module):
 		x = tfft.ifftn(rhs/lhs, dim=[2,3])
 		return x.real
 
-class U_Update(nn.Module):
+class V_Update(nn.Module):
 	def __init__(self):
-		super(U_Update, self).__init__()
+		super(V_Update, self).__init__()
 
 	def forward(self, v_tilde, y, rho2, M):
 		t1 = rho2*v_tilde - M 
@@ -136,7 +136,7 @@ class P4IP_Net(nn.Module):
 		self.n =  n_iters
 		self.init = InitNet(self.n)
 		self.X = X_Update() # FFT based quadratic solution
-		self.U = U_Update()	# Poisson MLE
+		self.V = V_Update()	# Poisson MLE
 		self.Z = Z_Update_ResUNet() # BW Denoiser
 	
 	def init_l2(self, y, A, M):
@@ -162,20 +162,20 @@ class P4IP_Net(nn.Module):
 		x_list.append(x)
 		# Other ADMM variables
 		z = Variable(x.data.clone()).to(device)
-		u = Variable(y.data.clone()).to(device)
-		v1 = torch.zeros(y.size()).to(device)
-		v2 = torch.zeros(y.size()).to(device)
+		v = Variable(y.data.clone()).to(device)
+		u1 = torch.zeros(y.size()).to(device)
+		u2 = torch.zeros(y.size()).to(device)
 			
 		for n in range(self.n):
 			rho1 = rho1_iters[:,:,:,n].view(N,1,1,1)
 			rho2 = rho2_iters[:,:,:,n].view(N,1,1,1)
 			# U, Z and X updates
-			u = self.U(conv_fft_batch(A,x) + v1, y, rho1, M)
-			z = self.Z(x + v2)
-			x = self.X(conv_fft_batch(At,u - v1), z - v2, AtA_fft, rho1, rho2)
+			v = self.V(conv_fft_batch(A,x) + u1, y, rho1, M)
+			z = self.Z(x + u2)
+			x = self.X(conv_fft_batch(At,v - u1), z - u2, AtA_fft, rho1, rho2)
 			# Lagrangian updates			
-			v1 = v1 + conv_fft_batch(A,x) - u
-			v2 = v2 + x - z
+			u1 = u1 + conv_fft_batch(A,x) - v
+			u2 = u2 + x - z
 			x_list.append(x)
 
 		return x_list
