@@ -148,7 +148,7 @@ class P4IP_Net(nn.Module):
 	
 	def init_l2(self, y, H, M):
 		# N, C, H, W = y.size()
-		Ht, HtH_fft = torch.conj(Ht), torch.abs(H)**2
+		Ht, HtH_fft = torch.conj(H), torch.abs(H)**2
 		rhs = tfft.fftn( conv_fft_batch(Ht, y/M), dim=[2,3] )
 		lhs = HtH_fft + (1/M)
 		x0 = torch.real(tfft.ifftn(rhs/lhs, dim=[2,3]))
