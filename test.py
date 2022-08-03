@@ -306,5 +306,5 @@ if __name__ =="__main__":
         os.mkdir('./results/')
         
     # test_p4ip(n_iters=8, result_path='./results/p4ip_25.2_test/', model_path='./saved_models/P4IP_30epochs.pth', I=25.2)
-    test_shear(result_path='./results/p4ip_25.2_test/', I=23.5)
+    test_shear(result_path='./results/p4ip_25.2_test/', I=25.2)
     plot_results(result_path='./results/p4ip_25.2_test/', results_file='p4ip_results.json')
