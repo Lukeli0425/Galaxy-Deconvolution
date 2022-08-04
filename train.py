@@ -11,7 +11,7 @@ from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
-def train_P4IP( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_size=32,
+def train_P4IP( n_epochs=10, n_iters=8, pnp=True, lr=1e-4, train_val_split=0.857, batch_size=32,
                 model_save_path='./saved_models/', load_pretrain=False,
                 pretrained_file = None):
     """Train Poisson Deblurring (P4IP) model."""
@@ -19,7 +19,7 @@ def train_P4IP( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_si
     train_loader, val_loader = get_dataloader(train_test_split=train_val_split, batch_size=batch_size)
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = P4IP_Net(n_iters=n_iters)
+    model = P4IP_Net(n_iters=n_iters, PnP=pnp)
     model.to(device)
     if load_pretrain:
         try:
@@ -130,15 +130,17 @@ if __name__ =="__main__":
     parser.add_argument('--model', type=str, default='P4IP', choices=['PnP_ADMM', 'P4IP'])
     parser.add_argument('--n_epochs', type=int, default=20)
     parser.add_argument('--n_iters', type=int, default=8)
+    parser.add_argument('--pnp', type=bool, default=False)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--train_val_split', type=float, default=0.857)
-    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--load_pretrain', type=bool, default=False)
     opt = parser.parse_args()
 
     if opt.model == 'PnP_ADMM':
         train_PnP_ADMM( n_epochs=opt.n_epochs,
                         n_iters=opt.n_iters,
+                        pnp=opt.pnp,
                         lr=opt.lr,
                         train_val_split=opt.train_val_split,
                         batch_size=opt.batch_size,
