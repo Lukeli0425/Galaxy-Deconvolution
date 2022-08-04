@@ -34,10 +34,10 @@ def train_P4IP( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_si
     for epoch in range(n_epochs):
         model.train()
         train_loss = 0.0
-        for idx, ((obs, psf, M), gt) in enumerate(train_loader):
+        for idx, ((obs, psf, alpha), gt) in enumerate(train_loader):
             optimizer.zero_grad()
-            obs, psf, M, gt = obs.to(device), psf.to(device), M.to(device), gt.to(device)
-            output = model(obs, psf, M)
+            obs, psf, alpha, gt = obs.to(device), psf.to(device), alpha.to(device), gt.to(device)
+            output = model(obs, psf, alpha)
             rec = output[-1].squeeze(dim=1) #* M.view(batch_size,1,1)
             loss = loss_fn(gt.squeeze(dim=1), rec)
 
@@ -50,10 +50,10 @@ def train_P4IP( n_epochs=10, n_iters=8, lr=1e-4, train_val_split=0.857, batch_si
                 test_loss = 0.0
                 model.eval()
                 optimizer.zero_grad()
-                for _, ((obs, psf, M), gt) in enumerate(val_loader):
+                for _, ((obs, psf, alpha), gt) in enumerate(val_loader):
                     with torch.no_grad():
-                        obs, psf, M, gt = obs.to(device), psf.to(device), M.to(device), gt.to(device)
-                        output = model(obs, psf, M)
+                        obs, psf, alpha, gt = obs.to(device), psf.to(device), alpha.to(device), gt.to(device)
+                        output = model(obs, psf, alpha)
                         rec = output[-1].squeeze(dim=1) #* M.view(batch_size,1,1)
                         loss = loss_fn(gt.squeeze(dim=1), rec)
                         test_loss += loss.item()
