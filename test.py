@@ -141,9 +141,9 @@ def test_shear(model_file='./saved_models/P4IP_30epochs.pth', result_path='./res
     try:
         with open(os.path.join(result_path, results_file), 'r') as f:
             results = json.load(f)
-        logging.info('Successfully loaded in {results_file}.')
+        logging.info(f'Successfully loaded in {results_file}.')
     except:
-        logging.warning('Failed loading in {results_file}.')
+        logging.warning(f'Failed loading in {results_file}.')
         results = {}
 
     p4ip = p4ip_deconvolver(model_file=model_file)
@@ -226,8 +226,9 @@ def plot_results(result_path='./results/p4ip/', results_file='p4ip_results.json'
     try:
         with open(os.path.join(result_path, results_file), 'r') as f:
             results = json.load(f)
+        logging.info(f'Successfully loaded in {results_file}.')
     except:
-        logging.raiseExceptions('Failed loading in {results_file}.')
+        logging.raiseExceptions(f'Failed loading in {results_file}.')
 
     # Plot PSNR
     try:
