@@ -16,17 +16,17 @@ os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
 class p4ip_deconvolver:
     """Wrapper class for P4IP deconvolution."""
-    def __init__(self, model_file='./saved_models/P4IP_30epochs.pth'):
+    def __init__(self, model_file='./saved_models/P4IP_20epochs.pth', pnp=False):
         self.model_file = model_file
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.model = P4IP_Net(n_iters=8)
+        self.model = P4IP_Net(n_iters=8, PnP=pnp)
         self.model.to(self.device)
         # Load the p4ip model
         try:
             self.model.load_state_dict(torch.load(model_file, map_location=torch.device(self.device)))
-            logging.info('Successfully loaded in {model_file}.')
+            logging.info(f'Successfully loaded in {model_file}.')
         except:
-            logging.raiseExceptions('Failed loading {model_file}!')
+            logging.raiseExceptions(f'Failed loading {model_file}!')
 
     def deconvolve(self, obs, psf):
         """Deconvolve PSF with P4IP model."""
@@ -56,7 +56,7 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
     test_dataset = Galaxy_Dataset(train=False, I=I)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = P4IP_Net(n_iters=n_iters)
+    model = P4IP_Net(n_iters=n_iters, PnP=True)
     model.to(device)
     # Load the p4ip model
     try:
@@ -127,7 +127,7 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
 
     return results
 
-def test_shear(model_file='./saved_models/P4IP_30epochs.pth', result_path='./results/p4ip/', results_file='p4ip_results.json', I=23.5):
+def test_shear(pnp=True, model_file='./saved_models/P4IP_20epochs.pth', result_path='./results/p4ip/', results_file='p4ip_results.json', I=23.5):
     """Estimate shear"""
     test_dataset = Galaxy_Dataset(train=False, I=I)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
@@ -146,7 +146,7 @@ def test_shear(model_file='./saved_models/P4IP_30epochs.pth', result_path='./res
         logging.warning(f'Failed loading in {results_file}.')
         results = {}
 
-    p4ip = p4ip_deconvolver(model_file=model_file)
+    p4ip = p4ip_deconvolver(model_file=model_file, pnp=pnp)
     for idx, ((obs, psf, M), gt) in enumerate(test_loader):
         with torch.no_grad():
             try:
@@ -309,5 +309,5 @@ if __name__ =="__main__":
         os.mkdir('./results/')
         
     test_p4ip(n_iters=8, result_path='./results/poisson_23.5/', model_path='./saved_models/P4IP_20epochs.pth', I=23.5)
-    test_shear(result_path='./results/poisson_23.5/', I=23.5)
+    test_shear(pnp=True, result_path='./results/poisson_23.5/', I=23.5)
     plot_results(result_path='./results/poisson_23.5/', results_file='p4ip_results.json')

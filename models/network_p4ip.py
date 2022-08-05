@@ -134,7 +134,7 @@ class Z_Update_ResUNet(nn.Module):
 
 
 class P4IP_Net(nn.Module):
-	def __init__(self, n_iters=8, PnP=True):
+	def __init__(self, n_iters=8, PnP=False):
 		super(P4IP_Net, self).__init__()
 		self.n =  n_iters
 		self.pnp = PnP
