@@ -249,4 +249,4 @@ if __name__ == "__main__":
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
-    dataset = Galaxy_Dataset(atmos=False, I=opt.I, pixel_scale=0.05, data_path='./dataset/' ,COSMOS_path='./data/', )
+    dataset = Galaxy_Dataset(atmos=False, I=opt.I, pixel_scale=0.05)
