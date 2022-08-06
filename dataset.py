@@ -229,7 +229,7 @@ class Galaxy_Dataset(Dataset):
 
 def get_dataloader(train_test_split=0.857, batch_size=32, I=23.5):
     """Create dataloaders from Galaxy Dataset."""
-    train_dataset = Galaxy_Dataset(train=True, I=I, data_path='/mnt/WD6TB/tianaoli/dataset/' if torch.cuda.is_available() else './dataset/')
+    train_dataset = Galaxy_Dataset(train=True, I=I, data_path='/mnt/WD6TB/tianaoli/dataset/')
     train_size = int(train_test_split * len(train_dataset))
     val_size = len(train_dataset) - train_size
     train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])

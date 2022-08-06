@@ -133,7 +133,7 @@ if __name__ =="__main__":
     parser.add_argument('--pnp', type=bool, default=False)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--train_val_split', type=float, default=0.857)
-    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--load_pretrain', type=bool, default=False)
     opt = parser.parse_args()
 
