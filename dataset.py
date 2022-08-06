@@ -14,7 +14,7 @@ from utils import PSNR
 class Galaxy_Dataset(Dataset):
     """A galaxy image dataset generated with Galsim."""
     def __init__(self,  train=True, data_path='/mnt/WD6TB/tianaoli/dataset/', train_split = 0.7, n_total=0,
-                        COSMOS_path='/mnt/WD6TB/tianaoli/', I=23.5, img_size=(48,48),
+                        COSMOS_path='/mnt/WD6TB/tianaoli/', atmos=True, I=23.5, img_size=(48,48),
                         gal_max_shear=0.5, atmos_max_shear=0.2, 
                         pixel_scale=0.2, seeing=0.7):
         logging.info('Constructing dataset.')
@@ -28,6 +28,7 @@ class Galaxy_Dataset(Dataset):
         self.sequence = []
         self.info = {}
 
+        self.atmos = atmos # ground-based or space-based
         self.I = I # I = 23.5 or 25.2 COSMOS data
         self.img_size = img_size
         self.gal_max_shear = gal_max_shear
@@ -38,7 +39,7 @@ class Galaxy_Dataset(Dataset):
         # Create directory for the dataset
         if not os.path.exists(data_path):
             os.mkdir(data_path)
-        self.data_path = os.path.join(data_path, f'COSMOS_{self.I}')
+        self.data_path = os.path.join(data_path, f'COSMOS_{self.I}_{"ground" if atmos else "space"}')
         if not os.path.exists(self.data_path):
             os.mkdir(self.data_path)
         if not os.path.exists(os.path.join(self.data_path, 'obs')): # create directory for obs images
@@ -69,7 +70,7 @@ class Galaxy_Dataset(Dataset):
             self.n_test = self.info['n_test']
             self.sequence = self.info['sequence']
         except:
-            self.info = {'I':I, 'img_size':img_size, 'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'pixel_scale':pixel_scale, 'seeing':seeing}
+            self.info = {'atmos':atmos, 'I':I, 'img_size':img_size, 'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'pixel_scale':pixel_scale, 'seeing':seeing}
             # Generate random sequence for data
             logging.warning(f'Failed reading information from {self.info_file}.')
             self.sequence = [i for i in range(self.n_total)]
@@ -103,15 +104,16 @@ class Galaxy_Dataset(Dataset):
             theta = 2. * np.pi * rng()          # radians
             # PSF parameters
             psf_flux = 1.e5
-            rng_gaussian = galsim.GaussianDeviate(seed=random_seed+k+1, mean=self.seeing, sigma=0.18)
-            atmos_fwhm = 0 # arcsec (mean 0.7 for LSST)
-            while atmos_fwhm < 0.35 or atmos_fwhm > 1.1: # sample fwhm
-                atmos_fwhm = rng_gaussian()
-            # atmos_fwhm = self.seeing + (rng()-0.5)*0.25 # sample uniformly in [0.45, 0.95]
-            atmos_e = rng() * self.atmos_max_shear # ellipticity of atmospheric PSF
-            atmos_beta = 2. * np.pi * rng()     # radians
-            atmos_g1 = atmos_e * np.cos(atmos_beta)
-            atmos_g2 = atmos_e * np.sin(atmos_beta)
+            if self.atmos:
+                rng_gaussian = galsim.GaussianDeviate(seed=random_seed+k+1, mean=self.seeing, sigma=0.18)
+                atmos_fwhm = 0 # arcsec (mean 0.7 for LSST)
+                while atmos_fwhm < 0.35 or atmos_fwhm > 1.1: # sample fwhm
+                    atmos_fwhm = rng_gaussian()
+                # atmos_fwhm = self.seeing + (rng()-0.5)*0.25 # sample uniformly in [0.45, 0.95]
+                atmos_e = rng() * self.atmos_max_shear # ellipticity of atmospheric PSF
+                atmos_beta = 2. * np.pi * rng()     # radians
+                atmos_g1 = atmos_e * np.cos(atmos_beta)
+                atmos_g2 = atmos_e * np.sin(atmos_beta)
             opt_defocus = 0.3 + 0.4 * rng()     # wavelengths
             opt_a1 = 2*0.5*(rng() - 0.5)        # wavelengths (-0.29)
             opt_a2 = 2*0.5*(rng() - 0.5)        # wavelengths (0.12)
@@ -119,7 +121,7 @@ class Galaxy_Dataset(Dataset):
             opt_c2 = 2*1.*(rng() - 0.5)         # wavelengths (-0.33)
             opt_obscuration = 0.165             # linear scale size of secondary mirror obscuration $(3.4/8.36)^2$
             lam = 700                           # nm    NB: don't use lambda - that's a reserved word.
-            tel_diam = 8.36                     # telescope diameter / meters (8.36 for LSST)
+            tel_diam = 8.36 if self.atmos else 6.5# telescope diameter / meters (8.36 for LSST, 6.5 for JWST)
             # psf_beta = 3
             # psf_trunc= 2 * atmos_fwhm
             # CCD parameters
@@ -138,9 +140,6 @@ class Galaxy_Dataset(Dataset):
             gal = gal.magnify(gal_mu) # Also apply a magnification mu = ( (1-kappa)^2 - |gamma|^2 )^-1, this conserves surface brightness, so it scales both the area and flux.
             
             # Simulated PSF (optical + atmospgeric)
-            # Define the atmospheric component of PSF
-            atmos = galsim.Kolmogorov(fwhm=atmos_fwhm, flux=1) # Note: the flux here is the default flux=1.
-            atmos = atmos.shear(e=atmos_e, beta=atmos_beta*galsim.radians)
             # Define the optical component of PSF
             lam_over_diam = lam * 1.e-9 / tel_diam # radians
             lam_over_diam *= 206265  # arcsec
@@ -150,8 +149,13 @@ class Galaxy_Dataset(Dataset):
                                         astig1 = opt_a1, astig2 = opt_a2,
                                         obscuration = opt_obscuration,
                                         flux=1)
+            if self.atmos: # Define the atmospheric component of PSF
+                atmos = galsim.Kolmogorov(fwhm=atmos_fwhm, flux=1) # Note: the flux here is the default flux=1.
+                atmos = atmos.shear(e=atmos_e, beta=atmos_beta*galsim.radians)
+                psf = galsim.Convolve([atmos, optics], real_space=True)
+            else:
+                psf = psf_ori
             
-            psf = galsim.Convolve([atmos, optics], real_space=True)
             final = galsim.Convolve([psf, gal]) # Make the combined profile
             # Offset by up to 1/2 pixel in each direction
             dx = rng() - 0.5
@@ -189,10 +193,10 @@ class Galaxy_Dataset(Dataset):
             plt.title('Original Galaxy')
             plt.subplot(2,2,2)
             plt.imshow(gal_image.array)
-            plt.title('Sheared Galaxy\n($e_1={:.3f}$, $e_2={:.3f}$)'.format(gal_g1, gal_g2))
+            plt.title('Simulated Galaxy\n($e_1={:.3f}$, $e_2={:.3f}$)'.format(gal_g1, gal_g2))
             plt.subplot(2,2,3)
             plt.imshow(psf_image.array)
-            plt.title('PSF\n($e_1={:.3f}$, $e_2={:.3f}$, FWHM={:.2f})'.format(atmos_g1, atmos_g2, atmos_fwhm))
+            plt.title('PSF\n($e_1={:.3f}$, $e_2={:.3f}$, FWHM={:.2f})'.format(atmos_g1, atmos_g2, atmos_fwhm) if self.atmos else 'PSF')
             plt.subplot(2,2,4)
             plt.imshow(obs.array)
             plt.title('Observed Galaxy\n($PSNR={:.2f}$)'.format(psnr))
@@ -245,4 +249,4 @@ if __name__ == "__main__":
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
-    dataset = Galaxy_Dataset(I=opt.I)
+    dataset = Galaxy_Dataset(atmos=False, I=opt.I, pixel_scale=0.05, data_path='./dataset/' ,COSMOS_path='./data/', )
