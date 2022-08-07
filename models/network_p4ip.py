@@ -105,13 +105,20 @@ class X_Update(nn.Module):
 		x = tfft.ifftn(rhs/lhs, dim=[2,3])
 		return x.real
 
-class V_Update(nn.Module):
+class V_Update_Poisson(nn.Module):
 	def __init__(self):
-		super(V_Update, self).__init__()
+		super(V_Update_Poisson, self).__init__()
 
 	def forward(self, v_tilde, y, rho2, alpha):
 		t1 = rho2*v_tilde - alpha 
 		return 0.5*(1/rho2)*(-t1 + torch.sqrt(t1**2 + 4*y*rho2))
+
+class V_Update_Gaussian(nn.Module):
+	def __init__(self):
+		super(V_Update_Gaussian, self).__init__()
+
+	def forward(self, v_tilde, y, rho2, alpha):
+		return (rho2*v_tilde + y)/(1+rho2)
 
 class Z_Update(nn.Module):
 	"""Updating Z with l1 norm."""
@@ -128,23 +135,21 @@ class Z_Update_ResUNet(nn.Module):
 		super(Z_Update_ResUNet, self).__init__()		
 		self.net = ResUNet()
 
-	def forward(self, z):
+	def forward(self, z, lam, rho1):
 		z_out = self.net(z.float())
 		return z_out
 
 
 class P4IP_Net(nn.Module):
-	def __init__(self, n_iters=8, PnP=False):
+	def __init__(self, n_iters=8, poisson=True, PnP=False):
 		super(P4IP_Net, self).__init__()
 		self.n =  n_iters
+		self.poisson = poisson
 		self.pnp = PnP
 		self.init = InitNet(self.n)
 		self.X = X_Update() # FFT based quadratic solution
-		self.V = V_Update()	# Poisson MLE
-		if self.pnp:
-			self.Z = Z_Update_ResUNet() # BW Denoiser
-		else:
-			self.Z = Z_Update() # denoise with l1 norm
+		self.V = V_Update_Poisson() if poisson else	V_Update_Gaussian() # Poisson MLE
+		self.Z = Z_Update_ResUNet() if PnP else Z_Update() # BW Denoiser
 	
 	def init_l2(self, y, H, M):
 		# N, C, H, W = y.size()
@@ -179,10 +184,7 @@ class P4IP_Net(nn.Module):
 			lam = lam_iters[:,:,:,n].view(N,1,1,1)
 			# V, Z and X updates
 			v = self.V(conv_fft_batch(H,x) + u2, y, rho2, alpha)
-			if self.pnp:
-				z = self.Z(x + u1)
-			else:
-				z = self.Z(x + u1, lam, rho1)
+			z = self.Z(x + u1, lam, rho1)
 			x = self.X(z - u1, conv_fft_batch(At,v - u2), HtH_fft, rho1, rho2)
 			# Lagrangian updates
 			u1 = u1 + x - z			
