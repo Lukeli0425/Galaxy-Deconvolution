@@ -11,7 +11,6 @@ from utils_poisson_deblurring.utils_deblur import pad
 from utils_poisson_deblurring.utils_torch import conv_fft, conv_fft_batch, psf_to_otf
 
 
-
 def weights_init_kaiming(m):
 	classname = m.__class__.__name__
 	if classname.find('Conv') != -1:
@@ -126,7 +125,7 @@ class Z_Update(nn.Module):
 		super(Z_Update, self).__init__()		
 
 	def forward(self, z_tilde, lam, rho1):
-		z_out = torch.sign(z_tilde) * torch.max(0, torch.abs(z_tilde) - lam/rho1)
+		z_out = torch.sign(z_tilde) * torch.max(torch.zeros_like(z_tilde), torch.abs(z_tilde) - lam/rho1)
 		return z_out
 
 class Z_Update_ResUNet(nn.Module):

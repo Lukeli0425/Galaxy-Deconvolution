@@ -11,15 +11,14 @@ from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
-def train_P4IP( n_epochs=10, n_iters=8, pnp=True, lr=1e-4, train_val_split=0.857, batch_size=32,
+def train( n_epochs=10, n_iters=8, poisson=True, pnp=True, lr=1e-4, I=23.5, train_val_split=0.857, batch_size=32,
                 model_save_path='./saved_models/', load_pretrain=False,
                 pretrained_file = None):
-    """Train Poisson Deblurring (P4IP) model."""
-    logging.info('\nStart training P4IP.')
-    train_loader, val_loader = get_dataloader(train_test_split=train_val_split, batch_size=batch_size)
+    logging.info(f'\nStart training unrolled {"PnP-" if pnp else ""}ADMM with {"Poisson" if poisson else "Gaussian"} for {n_epochs} epochs.')
+    train_loader, val_loader = get_dataloader(I=I, train_test_split=train_val_split, batch_size=batch_size)
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = P4IP_Net(n_iters=n_iters, PnP=pnp)
+    model = P4IP_Net(n_iters=n_iters, poisson=poisson, PnP=pnp)
     model.to(device)
     if load_pretrain:
         try:
@@ -65,8 +64,9 @@ def train_P4IP( n_epochs=10, n_iters=8, pnp=True, lr=1e-4, train_val_split=0.857
     
     if not os.path.exists(model_save_path):
         os.mkdir(model_save_path)
-    torch.save(model.state_dict(), os.path.join(model_save_path, f'P4IP_{n_epochs}epochs.pth'))
-    logging.info(f'P4IP model saved to {os.path.join(model_save_path, f"P4IP_{n_epochs}epochs.pth")}')
+    model_file_name = f'{"Poisson" if poisson else "Gaussian"}{"_PnP" if pnp else ""}_{n_epochs}epochs.pth'
+    torch.save(model.state_dict(), os.path.join(model_save_path, model_file_name))
+    logging.info(f'P4IP model saved to {os.path.join(model_save_path, model_file_name)}')
 
     return
 
@@ -127,33 +127,27 @@ if __name__ =="__main__":
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser(description='Arguments for traning P4IP.')
-    parser.add_argument('--model', type=str, default='P4IP', choices=['PnP_ADMM', 'P4IP'])
-    parser.add_argument('--n_epochs', type=int, default=15)
+    # parser.add_argument('--model', type=str, default='P4IP', choices=['PnP_ADMM', 'P4IP'])
+    parser.add_argument('--n_epochs', type=int, default=20)
     parser.add_argument('--n_iters', type=int, default=8)
+    parser.add_argument('--poisson', type=bool, default=False)
     parser.add_argument('--pnp', type=bool, default=False)
     parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     parser.add_argument('--train_val_split', type=float, default=0.857)
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--load_pretrain', type=bool, default=False)
     opt = parser.parse_args()
 
-    if opt.model == 'PnP_ADMM':
-        train_PnP_ADMM( n_epochs=opt.n_epochs,
-                        n_iters=opt.n_iters,
-                        pnp=opt.pnp,
-                        lr=opt.lr,
-                        train_val_split=opt.train_val_split,
-                        batch_size=opt.batch_size,
-                        load_pretrain=opt.load_pretrain,
-                        model_save_path='./saved_models/',
-                        pretrained_file='./saved_models/PnP_ADMM_100epoch.pth')
-    elif opt.model == 'P4IP':
-        train_P4IP( n_epochs=opt.n_epochs,
-                    n_iters=opt.n_iters,
-                    lr=opt.lr,
-                    train_val_split=opt.train_val_split,
-                    batch_size=opt.batch_size,
-                    load_pretrain=opt.load_pretrain,
-                    model_save_path='./saved_models/',
-                    pretrained_file='./saved_models/p4ip_100epoch.pth')
+    train(n_epochs=opt.n_epochs,
+            n_iters=opt.n_iters,
+            poisson=opt.poisson,
+            pnp=opt.pnp,
+            lr=opt.lr,
+            I=opt.I,
+            train_val_split=opt.train_val_split,
+            batch_size=opt.batch_size,
+            load_pretrain=opt.load_pretrain,
+            model_save_path='./saved_models/')
+
     
