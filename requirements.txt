@@ -11,4 +11,5 @@ PILLOW
 bm3d
 astropy
 galsim
+webbpsf
 fpfs
