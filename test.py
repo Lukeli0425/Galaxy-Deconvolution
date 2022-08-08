@@ -314,13 +314,13 @@ if __name__ =="__main__":
     parser = argparse.ArgumentParser(description='Arguments for tesing unrolled ADMM.')
     parser.add_argument('--n_iters', type=int, default=8)
     parser.add_argument('--poisson', type=bool, default=True)
-    parser.add_argument('--PnP', type=bool, default=False)
+    parser.add_argument('--PnP', type=bool, default=True)
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
 
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
-    model_file = './saved_models/Poisson_15epochs.pth'
+    model_file = './saved_models/Poisson_PnP_20epochs.pth'
     test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I, model_file=model_file)
     test_shear(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I, model_file=model_file)
     plot_results(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I)

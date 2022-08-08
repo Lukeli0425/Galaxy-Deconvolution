@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+os.environ["CUDA_VISIBLE_DEVICES"] = '2'
 import logging
 import argparse
 import torch
@@ -77,7 +77,7 @@ if __name__ =="__main__":
     parser.add_argument('--n_iters', type=int, default=8)
     parser.add_argument('--poisson', type=bool, default=True)
     parser.add_argument('--PnP', type=bool, default=True)
-    parser.add_argument('--n_epochs', type=int, default=20)
+    parser.add_argument('--n_epochs', type=int, default=15)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     parser.add_argument('--train_val_split', type=float, default=0.857)
