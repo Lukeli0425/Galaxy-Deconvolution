@@ -16,12 +16,12 @@ from scipy.stats import gaussian_kde
 
 class ADMM_deconvolver:
     """Wrapper class for unrolled ADMM deconvolution."""
-    def __init__(self, n_iters=8, poisson=True, PnP=False, model_file='./saved_models/P4IP_20epochs.pth'):
+    def __init__(self, n_iters=8, poisson=True, PnP=False, model_file=None):
         self.model_file = model_file
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = Unrolled_ADMM(n_iters=n_iters, poisson=poisson, PnP=PnP)
         self.model.to(self.device)
-        # Load the p4ip model
+        # Load pretrained model
         try:
             self.model.load_state_dict(torch.load(model_file, map_location=torch.device(self.device)))
             logging.info(f'Successfully loaded in {model_file}.')
@@ -29,7 +29,7 @@ class ADMM_deconvolver:
             logging.raiseExceptions(f'Failed loading {model_file}!')
 
     def deconvolve(self, obs, psf):
-        """Deconvolve PSF with P4IP model."""
+        """Deconvolve PSF with unrolled ADMM model."""
         psf = torch.from_numpy(psf).unsqueeze(dim=0).unsqueeze(dim=0) if type(psf) is np.ndarray else psf
         obs = torch.from_numpy(obs).unsqueeze(dim=0).unsqueeze(dim=0) if type(obs) is np.ndarray else obs
         M = obs.ravel().mean()/0.33
@@ -40,9 +40,9 @@ class ADMM_deconvolver:
 
         return rec
 
-def test(n_iters, poisson, PnP, I, model_path):
+def test(n_iters, poisson, PnP, I, model_file):
     """Test the model."""     
-    logging.info('Start testing p4ip model.')
+    logging.info(f'Start testing unrolled {"PnP-" if PnP else ""}ADMM model with {"Poisson" if poisson else "Gaussian"} likelihood.')
     results = {} # dictionary to record the test results
     result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{I}/'
     results_file = os.path.join(result_path, 'results.json')
@@ -59,11 +59,11 @@ def test(n_iters, poisson, PnP, I, model_path):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = Unrolled_ADMM(n_iters=n_iters, poisson=poisson, PnP=PnP)
     model.to(device)
-    # Load the p4ip model
+    # Load the model
     try:
-        model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
+        model.load_state_dict(torch.load(model_file, map_location=torch.device(device)))
     except:
-        logging.raiseExceptions('Failed loading P4IP model!')
+        logging.raiseExceptions('Failed loading pretrained model!')
     
     loss_fn = MultiScaleLoss()
 
@@ -102,7 +102,7 @@ def test(n_iters, poisson, PnP, I, model_path):
         plt.subplot(2,2,4)
         plt.imshow(rec)
         plt.title('Recovered Galaxy\n($PSNR={:.2f}$)'.format(PSNR(gt, rec)))
-        plt.savefig(os.path.join(result_path, 'visualization', f"p4ip_{I}_{idx}.jpg"), bbox_inches='tight')
+        plt.savefig(os.path.join(result_path, 'visualization', f"vis_{I}_{idx}.jpg"), bbox_inches='tight')
         plt.close()
         
         obs_psnr.append(PSNR(gt, obs))
@@ -150,13 +150,13 @@ def test_shear(n_iters, poisson, PnP, I, model_file):
         logging.warning(f'Failed loading in {results_file}.')
         results = {}
 
-    p4ip = ADMM_deconvolver(n_iters=n_iters, poisson=poisson, PnP=PnP, model_file=model_file)
+    model = ADMM_deconvolver(n_iters=n_iters, poisson=poisson, PnP=PnP, model_file=model_file)
     for idx, ((obs, psf, M), gt) in enumerate(test_loader):
         with torch.no_grad():
             try:
                 rec = io.imread(os.path.join(result_path, 'rec/', f"rec_{I}_{idx}.tiff"))
             except:
-                rec = p4ip.deconvolve(obs, psf)
+                rec = model.deconvolve(obs, psf)
             gt = gt.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
             psf = psf.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
             obs = obs.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
@@ -218,7 +218,7 @@ def test_shear(n_iters, poisson, PnP, I, model_file):
     results['obs_err_rms'] = obs_err_rms.tolist()
     results['rec_err_rms'] = rec_err_rms.tolist()
     results['fpfs_err_rms'] = fpfs_err_rms.tolist()
-    with open(os.path.join(result_path, results_file), 'w') as f:
+    with open(results_file, 'w') as f:
         json.dump(results, f)
     logging.info(f"Shear estimation results saved to {results_file}.")
     
@@ -248,10 +248,10 @@ def plot_results(n_iters, poisson, PnP, I):
         x, y, z = obs_psnr[idx], rec_psnr[idx], z[idx]
         plt.scatter(x, y, c=z, s=8, cmap='Spectral_r')
         plt.colorbar()
-        plt.title('PSNR of P4IP Test Results', fontsize=18)
+        plt.title('PSNR of Test Results', fontsize=18)
         plt.xlabel('PSNR of Observed Galaxies', fontsize=15)
         plt.ylabel('PSNR of Recovered Galaxies', fontsize=15)
-        plt.savefig(os.path.join(result_path, 'p4ip_psnr.jpg'), bbox_inches='tight')
+        plt.savefig(os.path.join(result_path, 'psnr.jpg'), bbox_inches='tight')
         plt.close()
     except:
         logging.warning('No PSNR data found!')
@@ -288,7 +288,7 @@ def plot_results(n_iters, poisson, PnP, I):
     plt.ylabel('$e_2$', fontsize=13)
     plt.xlim([-0.8,0.8])
     plt.ylim([-0.8,0.8])
-    plt.title('P4IP Recovered Galaxy', fontsize=13)
+    plt.title('Recovered Galaxy', fontsize=13)
 
     plt.subplot(1,3,3)
     x = (fpfs_shear - gt_shear)[:,0]
@@ -303,7 +303,7 @@ def plot_results(n_iters, poisson, PnP, I):
     plt.xlim([-0.8,0.8])
     plt.ylim([-0.8,0.8])
     plt.title('Fourier Power Spectrum Deconvolution', fontsize=13)
-    plt.savefig(os.path.join(result_path, 'p4ip_shear_err.jpg'), bbox_inches='tight')
+    plt.savefig(os.path.join(result_path, 'shear_err.jpg'), bbox_inches='tight')
 
 
 
@@ -311,16 +311,16 @@ def plot_results(n_iters, poisson, PnP, I):
 if __name__ =="__main__":
     logging.basicConfig(level=logging.INFO)
     
-    parser = argparse.ArgumentParser(description='Arguments for traning P4IP.')
+    parser = argparse.ArgumentParser(description='Arguments for tesing unrolled ADMM.')
     parser.add_argument('--n_iters', type=int, default=8)
-    parser.add_argument('--poisson', type=bool, default=False)
-    parser.add_argument('--PnP', type=bool, default=True)
+    parser.add_argument('--poisson', type=bool, default=True)
+    parser.add_argument('--PnP', type=bool, default=False)
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
 
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
-        
-    test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I, model_path='./saved_models/Gaussian_PnP_20epochs.pth')
-    test_shear(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I)
+    model_file = './saved_models/Poisson_15epochs.pth'
+    test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I, model_file=model_file)
+    test_shear(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I, model_file=model_file)
     plot_results(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I)

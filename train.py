@@ -1,4 +1,5 @@
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 import logging
 import argparse
 import torch
@@ -8,13 +9,11 @@ from dataset import get_dataloader
 from models.network_p4ip import Unrolled_ADMM
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
-
 def train(n_iters=8, poisson=True, PnP=True, 
             n_epochs=10, lr=1e-4, I=23.5, train_val_split=0.857, batch_size=32, 
             model_save_path='./saved_models/', load_pretrain=False,
             pretrained_file = None):
-    logging.info(f'\nStart training unrolled {"PnP-" if PnP else ""}ADMM with {"Poisson" if poisson else "Gaussian"} for {n_epochs} epochs.')
+    logging.info(f'\nStart training unrolled {"PnP-" if PnP else ""}ADMM with {"Poisson" if poisson else "Gaussian"} likelihood for {n_epochs} epochs.')
     train_loader, val_loader = get_dataloader(I=I, train_test_split=train_val_split, batch_size=batch_size)
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -76,20 +75,19 @@ if __name__ =="__main__":
 
     parser = argparse.ArgumentParser(description='Arguments for training urolled ADMM.')
     parser.add_argument('--n_iters', type=int, default=8)
-    parser.add_argument('--poisson', type=bool, default=False)
-    parser.add_argument('--PnP', type=bool, default=False)
+    parser.add_argument('--poisson', type=bool, default=True)
+    parser.add_argument('--PnP', type=bool, default=True)
     parser.add_argument('--n_epochs', type=int, default=20)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     parser.add_argument('--train_val_split', type=float, default=0.857)
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--load_pretrain', type=bool, default=False)
+    parser.add_argument('--load_pretrain', type=bool, default=True)
     opt = parser.parse_args()
 
-    train(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP,
+    train(  n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP,
             n_epochs=opt.n_epochs,lr=opt.lr,
             I=opt.I, train_val_split=opt.train_val_split, batch_size=opt.batch_size,
             load_pretrain=opt.load_pretrain,
-            model_save_path='./saved_models/')
-
-    
+            model_save_path='./saved_models/',
+            pretrained_file='./saved_models/Poisson_PnP_20epochs.pth')
