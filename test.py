@@ -1,5 +1,7 @@
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 import logging
+import argparse
 import json
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,19 +9,17 @@ from skimage import io
 import torch
 from torch.utils.data import DataLoader
 from dataset import Galaxy_Dataset
-from models.network_p4ip import P4IP_Net
+from models.network_p4ip import Unrolled_ADMM
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 from utils import PSNR, estimate_shear
 from scipy.stats import gaussian_kde
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
-
-class p4ip_deconvolver:
-    """Wrapper class for P4IP deconvolution."""
-    def __init__(self, model_file='./saved_models/P4IP_20epochs.pth', pnp=False):
+class ADMM_deconvolver:
+    """Wrapper class for unrolled ADMM deconvolution."""
+    def __init__(self, n_iters=8, poisson=True, PnP=False, model_file='./saved_models/P4IP_20epochs.pth'):
         self.model_file = model_file
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.model = P4IP_Net(n_iters=8, PnP=pnp)
+        self.model = Unrolled_ADMM(n_iters=n_iters, poisson=poisson, PnP=PnP)
         self.model.to(self.device)
         # Load the p4ip model
         try:
@@ -40,11 +40,12 @@ class p4ip_deconvolver:
 
         return rec
 
-def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_models/P4IP_30epochs.pth', I=23.5):
-    """Test the model."""    
+def test(n_iters, poisson, PnP, I, model_path):
+    """Test the model."""     
     logging.info('Start testing p4ip model.')
     results = {} # dictionary to record the test results
-    results_file = os.path.join(result_path, 'p4ip_results.json')
+    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{I}/'
+    results_file = os.path.join(result_path, 'results.json')
 
     if not os.path.exists(result_path):
         os.mkdir(result_path)
@@ -56,7 +57,7 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
     test_dataset = Galaxy_Dataset(train=False, I=I)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = P4IP_Net(n_iters=n_iters, PnP=True)
+    model = Unrolled_ADMM(n_iters=n_iters, poisson=poisson, PnP=PnP)
     model.to(device)
     # Load the p4ip model
     try:
@@ -127,8 +128,8 @@ def test_p4ip(n_iters=8, result_path='./results/p4ip/', model_path='./saved_mode
 
     return results
 
-def test_shear(pnp=True, model_file='./saved_models/P4IP_20epochs.pth', result_path='./results/p4ip/', results_file='p4ip_results.json', I=23.5):
-    """Estimate shear"""
+def test_shear(n_iters, poisson, PnP, I, model_file):
+    """Estimate shear with saved model."""
     test_dataset = Galaxy_Dataset(train=False, I=I)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
@@ -136,17 +137,20 @@ def test_shear(pnp=True, model_file='./saved_models/P4IP_20epochs.pth', result_p
     obs_shear = []
     rec_shear = []
     fpfs_shear = []
+    
+    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{I}/'
+    results_file = os.path.join(result_path, 'results.json')
     if not os.path.exists(result_path):
         os.mkdir(result_path)
     try:
-        with open(os.path.join(result_path, results_file), 'r') as f:
+        with open(results_file, 'r') as f:
             results = json.load(f)
         logging.info(f'Successfully loaded in {results_file}.')
     except:
         logging.warning(f'Failed loading in {results_file}.')
         results = {}
 
-    p4ip = p4ip_deconvolver(model_file=model_file, pnp=pnp)
+    p4ip = ADMM_deconvolver(n_iters=n_iters, poisson=poisson, PnP=PnP, model_file=model_file)
     for idx, ((obs, psf, M), gt) in enumerate(test_loader):
         with torch.no_grad():
             try:
@@ -220,11 +224,13 @@ def test_shear(pnp=True, model_file='./saved_models/P4IP_20epochs.pth', result_p
     
     return results
 
-def plot_results(result_path='./results/p4ip/', results_file='p4ip_results.json'):
+def plot_results(n_iters, poisson, PnP, I):
+    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{I}/'
+    results_file = os.path.join(result_path, 'results.json')
     if not os.path.exists(result_path):
         os.mkdir(result_path)
     try:
-        with open(os.path.join(result_path, results_file), 'r') as f:
+        with open(results_file, 'r') as f:
             results = json.load(f)
         logging.info(f'Successfully loaded in {results_file}.')
     except:
@@ -305,9 +311,16 @@ def plot_results(result_path='./results/p4ip/', results_file='p4ip_results.json'
 if __name__ =="__main__":
     logging.basicConfig(level=logging.INFO)
     
+    parser = argparse.ArgumentParser(description='Arguments for traning P4IP.')
+    parser.add_argument('--n_iters', type=int, default=8)
+    parser.add_argument('--poisson', type=bool, default=False)
+    parser.add_argument('--PnP', type=bool, default=True)
+    parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
+    opt = parser.parse_args()
+
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
         
-    test_p4ip(n_iters=8, result_path='./results/poisson_23.5/', model_path='./saved_models/P4IP_15epochs.pth', I=23.5)
-    test_shear(pnp=True, result_path='./results/poisson_23.5/', I=23.5)
-    plot_results(result_path='./results/poisson_23.5/', results_file='p4ip_results.json')
+    test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I, model_path='./saved_models/Gaussian_PnP_20epochs.pth')
+    test_shear(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I)
+    plot_results(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I)

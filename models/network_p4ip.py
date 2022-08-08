@@ -86,7 +86,7 @@ class InitNet(nn.Module):
 		HtH_fft = torch.abs(H)**2
 		x = self.conv_layers(HtH_fft.float())
 		x = torch.cat((x.view(N,1,16*8*8),  M.float().view(N,1,1)), axis=2).float()
-		output = self.mlp(x)+1e-6
+		output = self.mlp(x)#+1e-6
 
 		rho1_iters = output[:,:,0:self.n].view(N, 1, 1, self.n)
 		rho2_iters = output[:,:,self.n:2*self.n].view(N, 1, 1, self.n)
@@ -139,9 +139,9 @@ class Z_Update_ResUNet(nn.Module):
 		return z_out
 
 
-class P4IP_Net(nn.Module):
+class Unrolled_ADMM(nn.Module):
 	def __init__(self, n_iters=8, poisson=True, PnP=False):
-		super(P4IP_Net, self).__init__()
+		super(Unrolled_ADMM, self).__init__()
 		self.n =  n_iters
 		self.poisson = poisson
 		self.pnp = PnP
