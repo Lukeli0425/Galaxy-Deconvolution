@@ -44,7 +44,7 @@ def test(n_iters, poisson, PnP, I, model_file):
     """Test the model."""     
     logging.info(f'Start testing unrolled {"PnP-" if PnP else ""}ADMM model with {"Poisson" if poisson else "Gaussian"} likelihood.')
     results = {} # dictionary to record the test results
-    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{I}/'
+    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{I}_35/'
     results_file = os.path.join(result_path, 'results.json')
 
     if not os.path.exists(result_path):
@@ -138,7 +138,7 @@ def test_shear(n_iters, poisson, PnP, I, model_file):
     rec_shear = []
     fpfs_shear = []
     
-    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{I}/'
+    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{I}_35/'
     results_file = os.path.join(result_path, 'results.json')
     if not os.path.exists(result_path):
         os.mkdir(result_path)
@@ -225,7 +225,7 @@ def test_shear(n_iters, poisson, PnP, I, model_file):
     return results
 
 def plot_results(n_iters, poisson, PnP, I):
-    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{I}/'
+    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{I}_35/'
     results_file = os.path.join(result_path, 'results.json')
     if not os.path.exists(result_path):
         os.mkdir(result_path)
@@ -320,7 +320,7 @@ if __name__ =="__main__":
 
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
-    model_file = './saved_models/Poisson_PnP_20epochs.pth'
+    model_file = './saved_models/Poisson_PnP_35epochs.pth'
     test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I, model_file=model_file)
     test_shear(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I, model_file=model_file)
     plot_results(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, I=opt.I)
