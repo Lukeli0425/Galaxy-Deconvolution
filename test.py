@@ -9,7 +9,7 @@ from skimage import io
 import torch
 from torch.utils.data import DataLoader
 from dataset import Galaxy_Dataset
-from models.network_p4ip import Unrolled_ADMM
+from models.Unrolled_ADMM import Unrolled_ADMM
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 from utils import PSNR, estimate_shear
 from scipy.stats import gaussian_kde
@@ -192,17 +192,17 @@ def test_shear(n_iters, poisson, PnP, I, model_file):
     rec_err_rms = np.sqrt(np.mean((rec_shear - gt_shear)**2, axis=0))
     fpfs_err_rms = np.sqrt(np.mean((fpfs_shear - gt_shear)**2, axis=0))
     logging.info('Shear error (mean): ({:.5f},{:.5f}) -> ({:.5f},{:.5f})   fpfs:({:.5f},{:.5f})'.format(
-        obs_err_mean[0], obs_err_mean[1],
-        rec_err_mean[0], rec_err_mean[1],
-        fpfs_err_mean[0], fpfs_err_mean[1]))
+                obs_err_mean[0], obs_err_mean[1],
+                rec_err_mean[0], rec_err_mean[1],
+                fpfs_err_mean[0], fpfs_err_mean[1]))
     logging.info('Shear error (median): ({:.5f},{:.5f}) -> ({:.5f},{:.5f})   fpfs:({:.5f},{:.5f})'.format(
-        obs_err_median[0], obs_err_median[1],
-        rec_err_median[0], rec_err_median[1],
-        fpfs_err_median[0], fpfs_err_median[1]))
+                obs_err_median[0], obs_err_median[1],
+                rec_err_median[0], rec_err_median[1],
+                fpfs_err_median[0], fpfs_err_median[1]))
     logging.info('Shear error (RMS): ({:.5f},{:.5f}) -> ({:.5f},{:.5f})   fpfs:({:.5f},{:.5f})'.format(
-        obs_err_rms[0], obs_err_rms[1],
-        rec_err_rms[0], rec_err_rms[1],
-        fpfs_err_rms[0], fpfs_err_rms[1]))
+                obs_err_rms[0], obs_err_rms[1],
+                rec_err_rms[0], rec_err_rms[1],
+                fpfs_err_rms[0], fpfs_err_rms[1]))
     
     # Save shear estimation
     results['gt_shear'] = gt_shear.tolist()
@@ -236,12 +236,11 @@ def plot_results(n_iters, poisson, PnP, I):
     except:
         logging.raiseExceptions(f'Failed loading in {results_file}.')
 
-    # Plot PSNR
+    # Plot PSNR distribution
     try:
-        obs_psnr = np.array(results['obs_psnr'])
-        rec_psnr = np.array(results['rec_psnr'])
+        obs_psnr, rec_psnr = np.array(results['obs_psnr']), np.array(results['rec_psnr'])
         plt.figure(figsize=(12,10))
-        plt.plot([10,35],[10,35],'r') # plt y=x line
+        plt.plot([10,35],[10,35],'r') # plot y=x line
         xy = np.vstack([obs_psnr, rec_psnr])
         z = gaussian_kde(xy)(xy)
         idx = z.argsort()
@@ -256,7 +255,7 @@ def plot_results(n_iters, poisson, PnP, I):
     except:
         logging.warning('No PSNR data found!')
 
-    # Plot the error
+    # Plot shear error density distribution
     gt_shear = np.array(results['gt_shear'])
     obs_shear = np.array(results['obs_shear'])
     rec_shear = np.array(results['rec_shear'])
