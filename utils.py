@@ -7,6 +7,8 @@ import torch
 import galsim
 import fpfs
 
+
+
 def PSNR(img1, img2, normalize=True):
     """Calculate the PSNR of two images."""
     if not img1.shape == img2.shape:
@@ -55,18 +57,20 @@ def estimate_shear(obs, psf=None, use_psf=False):
     return (g_1, g_2) 
 
 
-def plot_loss(train_loss, test_loss):
+def plot_loss(train_loss, val_loss, poisson, PnP, n_epochs, I):
     n_epochs = len(train_loss)
-    plt.figure(figsize=(10,6))
-    plt.plot(range(1, n_epochs+1), train_loss, '-o', markersize=4, label='Train Loss')
-    plt.plot(range(1, n_epochs+1), test_loss, '-o', markersize=4, label='Test Loss')
+    plt.figure(figsize=(12,7))
+    plt.plot(range(1, n_epochs+1), train_loss, '-o', markersize=3.5, label='Train Loss')
+    plt.plot(range(1, n_epochs+1), val_loss, '-o', markersize=3.5, label='Test Loss')
     plt.title('Loss Curve', fontsize=18)
-    plt.xlabel('Epoch', fontsize=16)
-    plt.ylabel('Loss', fontsize=16)
+    plt.xlabel('Epoch', fontsize=14)
+    plt.ylabel('Loss', fontsize=14)
     plt.legend(fontsize=15)
-    plt.show()
+    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{I}/'
+    plt.savefig(os.path.join(result_path, 'loss_curve.jpg'))
+    plt.close()
 
 if __name__ == "__main__":
-    train_loss = [0.082,0.079,0.072,0.062,0.051,0.047,0.039,0.035,0.032,0.029]
-    test_loss = [0.09,0.08,0.072,0.066,0.058,0.051,0.04,0.037,0.036,0.0335]
-    plot_loss(train_loss, test_loss)
+    train_loss = [0.082,0.079,0.072,0.062,0.051,0.047,0.039,0.035,0.032,0.029,0.082,0.079,0.072,0.062,0.051,0.047,0.039,0.035,0.032,0.029,0.082,0.079,0.072,0.062,0.051,0.047,0.039,0.035,0.032,0.029,0.09,0.08,0.072,0.066,0.058,0.051,0.04,0.037,0.036,0.0335]
+    val_loss = [0.09,0.08,0.072,0.066,0.058,0.051,0.04,0.037,0.036,0.0335,0.09,0.08,0.072,0.066,0.058,0.051,0.04,0.037,0.036,0.0335,0.09,0.08,0.072,0.066,0.058,0.051,0.04,0.037,0.036,0.0335,0.09,0.08,0.072,0.066,0.058,0.051,0.04,0.037,0.036,0.0335]
+    plot_loss(train_loss, val_loss, True, True, 50, 23.5)

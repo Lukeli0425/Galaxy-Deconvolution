@@ -4,10 +4,11 @@ import logging
 import argparse
 import torch
 from torch import nn
-from torch.optim import Adam, SGD
+from torch.optim import Adam
 from dataset import get_dataloader
-from models.network_p4ip import Unrolled_ADMM
+from models.Unrolled_ADMM import Unrolled_ADMM
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
+from utils import plot_loss
 
 def train(n_iters=8, poisson=True, PnP=True, 
             n_epochs=10, lr=1e-4, I=23.5, train_val_split=0.857, batch_size=32, 
@@ -16,6 +17,9 @@ def train(n_iters=8, poisson=True, PnP=True,
     logging.info(f'\nStart training unrolled {"PnP-" if PnP else ""}ADMM with {"Poisson" if poisson else "Gaussian"} likelihood for {n_epochs} epochs.')
     train_loader, val_loader = get_dataloader(I=I, train_test_split=train_val_split, batch_size=batch_size)
     
+    if not os.path.exists(model_save_path):
+        os.mkdir(model_save_path)
+        
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = Unrolled_ADMM(n_iters=n_iters, poisson=poisson, PnP=PnP)
     model.to(device)
@@ -29,6 +33,8 @@ def train(n_iters=8, poisson=True, PnP=True,
     optimizer = Adam(params=model.parameters(), lr = lr)
     loss_fn = MultiScaleLoss()
 
+    train_loss_list = []
+    val_loss_list = []
     for epoch in range(n_epochs):
         model.train()
         train_loss = 0.0
@@ -43,9 +49,9 @@ def train(n_iters=8, poisson=True, PnP=True,
             optimizer.step()
             train_loss += loss.item()
             
-            # evaluate on test dataset
+            # Evaluate on valid dataset
             if (idx+1) % 20 == 0:
-                test_loss = 0.0
+                val_loss = 0.0
                 model.eval()
                 optimizer.zero_grad()
                 for _, ((obs, psf, alpha), gt) in enumerate(val_loader):
@@ -54,18 +60,50 @@ def train(n_iters=8, poisson=True, PnP=True,
                         output = model(obs, psf, alpha)
                         rec = output[-1].squeeze(dim=1) #* M.view(batch_size,1,1)
                         loss = loss_fn(gt.squeeze(dim=1), rec)
-                        test_loss += loss.item()
+                        val_loss += loss.item()
 
-                logging.info(" [{}: {}/{}]  train_loss={:.4f}  test_loss={:.4f}".format(
+                logging.info(" [{}: {}/{}]  train_loss={:.4f}  val_loss={:.4f}".format(
                                 epoch+1, idx+1, len(train_loader),
                                 train_loss/(idx+1),
-                                test_loss/len(val_loader)))
+                                val_loss/len(val_loader)))
     
-    if not os.path.exists(model_save_path):
-        os.mkdir(model_save_path)
-    model_file_name = f'{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_epochs}epochs.pth'
-    torch.save(model.state_dict(), os.path.join(model_save_path, model_file_name))
-    logging.info(f'P4IP model saved to {os.path.join(model_save_path, model_file_name)}')
+        # Evaluate on train & valid dataset after every epoch
+        train_loss = 0.0
+        model.eval()
+        optimizer.zero_grad()
+        for _, ((obs, psf, alpha), gt) in enumerate(train_loader):
+            with torch.no_grad():
+                obs, psf, alpha, gt = obs.to(device), psf.to(device), alpha.to(device), gt.to(device)
+                output = model(obs, psf, alpha)
+                rec = output[-1].squeeze(dim=1) #* M.view(batch_size,1,1)
+                loss = loss_fn(gt.squeeze(dim=1), rec)
+                train_loss += loss.item()
+        train_loss_list.append(train_loss)
+        
+        val_loss = 0.0
+        model.eval()
+        optimizer.zero_grad()
+        for _, ((obs, psf, alpha), gt) in enumerate(val_loader):
+            with torch.no_grad():
+                obs, psf, alpha, gt = obs.to(device), psf.to(device), alpha.to(device), gt.to(device)
+                output = model(obs, psf, alpha)
+                rec = output[-1].squeeze(dim=1) #* M.view(batch_size,1,1)
+                loss = loss_fn(gt.squeeze(dim=1), rec)
+                val_loss += loss.item()
+        val_loss_list.append(val_loss)
+
+        logging.info(" [{}: {}/{}]  train_loss={:.4f}  val_loss={:.4f}".format(
+                        epoch+1, idx+1, len(train_loader),
+                        train_loss/(idx+1),
+                        val_loss/len(val_loader)))
+
+        if (epoch + 1) % 10 == 0:
+            model_file_name = f'{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{epoch+1}epochs.pth'
+            torch.save(model.state_dict(), os.path.join(model_save_path, model_file_name))
+            logging.info(f'P4IP model saved to {os.path.join(model_save_path, model_file_name)}')
+
+    # Plot loss curve
+    plot_loss(train_loss_list, val_loss_list, poisson, PnP, n_epochs, I)
 
     return
 
