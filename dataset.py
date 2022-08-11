@@ -187,21 +187,22 @@ class Galaxy_Dataset(Dataset):
             logging.info("Simulating Image:  [{:}/{:}]   PSNR={:.2f}".format(k+1,self.real_galaxy_catalog.nobjects, psnr))
 
             # Visualization
-            plt.figure(figsize=(10,10))
-            plt.subplot(2,2,1)
-            plt.imshow(gal_ori_image.array)
-            plt.title('Original Galaxy')
-            plt.subplot(2,2,2)
-            plt.imshow(gal_image.array)
-            plt.title('Simulated Galaxy\n($e_1={:.3f}$, $e_2={:.3f}$)'.format(gal_g1, gal_g2))
-            plt.subplot(2,2,3)
-            plt.imshow(psf_image.array)
-            plt.title('PSF\n($e_1={:.3f}$, $e_2={:.3f}$, FWHM={:.2f})'.format(atmos_g1, atmos_g2, atmos_fwhm) if self.atmos else 'PSF')
-            plt.subplot(2,2,4)
-            plt.imshow(obs.array)
-            plt.title('Observed Galaxy\n($PSNR={:.2f}$)'.format(psnr))
-            plt.savefig(os.path.join(self.data_path, 'visualization', f"COSMOS_{self.I}_{k}.jpg"), bbox_inches='tight')
-            plt.close()
+            if idx < 200:
+                plt.figure(figsize=(10,10))
+                plt.subplot(2,2,1)
+                plt.imshow(gal_ori_image.array)
+                plt.title('Original Galaxy')
+                plt.subplot(2,2,2)
+                plt.imshow(gal_image.array)
+                plt.title('Simulated Galaxy\n($e_1={:.3f}$, $e_2={:.3f}$)'.format(gal_g1, gal_g2))
+                plt.subplot(2,2,3)
+                plt.imshow(psf_image.array)
+                plt.title('PSF\n($e_1={:.3f}$, $e_2={:.3f}$, FWHM={:.2f})'.format(atmos_g1, atmos_g2, atmos_fwhm) if self.atmos else 'PSF')
+                plt.subplot(2,2,4)
+                plt.imshow(obs.array)
+                plt.title('Observed Galaxy\n($PSNR={:.2f}$)'.format(psnr))
+                plt.savefig(os.path.join(self.data_path, 'visualization', f"COSMOS_{self.I}_{k}.jpg"), bbox_inches='tight')
+                plt.close()
         
         self.info['PSNR'] = psnr_list
         with open(self.info_file, 'w') as f:
