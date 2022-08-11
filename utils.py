@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import logging
 from skimage import io
 import torch
 import galsim
@@ -9,7 +10,7 @@ import fpfs
 def PSNR(img1, img2, normalize=True):
     """Calculate the PSNR of two images."""
     if not img1.shape == img2.shape:
-        raise('Images have inconsistent Shapes!')
+        logging.raiseExceptions('Images have inconsistent Shapes!')
 
     img1 = np.array(img1)
     img2 = np.array(img2)
@@ -17,12 +18,12 @@ def PSNR(img1, img2, normalize=True):
     if normalize:
         img1 = (img1 - img1.min())/(img1.max() - img1.min())
         img2 = (img2 - img2.min())/(img2.max() - img1.min())
-        PIXEL_MAX = 1.0
+        pixel_max = 1.0
     else:
-        PIXEL_MAX = np.max([img1.max(), img2.max()])
+        pixel_max = np.max([img1.max(), img2.max()])
 
-    MSE = ((img1 - img2)**2).mean()
-    psnr = 20*np.log10(PIXEL_MAX/np.sqrt(MSE))
+    mse = ((img1 - img2)**2).mean()
+    psnr = 20*np.log10(pixel_max/np.sqrt(mse))
 
     return psnr
 
