@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 from skimage import io
 import torch
 import galsim
@@ -53,8 +54,18 @@ def estimate_shear(obs, psf=None, use_psf=False):
     return (g_1, g_2) 
 
 
+def plot_loss(train_loss, test_loss):
+    n_epochs = len(train_loss)
+    plt.figure(figsize=(10,6))
+    plt.plot(range(1, n_epochs+1), train_loss, '-o', markersize=4, label='Train Loss')
+    plt.plot(range(1, n_epochs+1), test_loss, '-o', markersize=4, label='Test Loss')
+    plt.title('Loss Curve', fontsize=18)
+    plt.xlabel('Epoch', fontsize=16)
+    plt.ylabel('Loss', fontsize=16)
+    plt.legend(fontsize=15)
+    plt.show()
+
 if __name__ == "__main__":
-    idx = 0
-    obs = io.imread(os.path.join('./dataset/COSMOS_23.5/obs/', f"obs_23.5_{idx}.tiff"))
-    g_1, g_2 = estimate_shear(obs)
-    print(g_1, g_2)
+    train_loss = [0.082,0.079,0.072,0.062,0.051,0.047,0.039,0.035,0.032,0.029]
+    test_loss = [0.09,0.08,0.072,0.066,0.058,0.051,0.04,0.037,0.036,0.0335]
+    plot_loss(train_loss, test_loss)
