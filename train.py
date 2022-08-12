@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '2'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 import logging
 import argparse
 import torch
@@ -93,7 +93,7 @@ def train(n_iters=8, poisson=True, PnP=True,
         val_loss_list.append(val_loss)
 
         logging.info(" [{}: {}/{}]  train_loss={:.4f}  val_loss={:.4f}".format(
-                        epoch+1, idx+1, len(train_loader),
+                        epoch+1, len(train_loader), len(train_loader),
                         train_loss/(idx+1),
                         val_loss/len(val_loader)))
 
@@ -113,14 +113,14 @@ if __name__ =="__main__":
 
     parser = argparse.ArgumentParser(description='Arguments for training urolled ADMM.')
     parser.add_argument('--n_iters', type=int, default=8)
-    parser.add_argument('--poisson', type=bool, default=True)
+    parser.add_argument('--poisson', type=bool, default=False)
     parser.add_argument('--PnP', type=bool, default=True)
-    parser.add_argument('--n_epochs', type=int, default=15)
+    parser.add_argument('--n_epochs', type=int, default=50)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     parser.add_argument('--train_val_split', type=float, default=0.857)
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--load_pretrain', type=bool, default=True)
+    parser.add_argument('--load_pretrain', type=bool, default=False)
     opt = parser.parse_args()
 
     train(  n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP,
