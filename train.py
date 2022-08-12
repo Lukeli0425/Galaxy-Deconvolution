@@ -50,7 +50,7 @@ def train(n_iters=8, poisson=True, PnP=True,
             train_loss += loss.item()
             
             # Evaluate on valid dataset
-            if (idx+1) % 20 == 0:
+            if (idx+1) % 25 == 0:
                 val_loss = 0.0
                 model.eval()
                 optimizer.zero_grad()

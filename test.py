@@ -88,24 +88,25 @@ def test(n_iters, poisson, PnP, n_epochs, I):
             rec = rec.squeeze(dim=0).squeeze(dim=0).cpu()
         
         # Save image
-        io.imsave(os.path.join(result_path, 'rec', f"rec_{I}_{idx}.tiff"), rec.numpy(), check_contrast=False)
+        # io.imsave(os.path.join(result_path, 'rec', f"rec_{I}_{idx}.tiff"), rec.numpy(), check_contrast=False)
         
         # Visualization
-        plt.figure(figsize=(10,10))
-        plt.subplot(2,2,1)
-        plt.imshow(gt)
-        plt.title('Sheared Galaxy')
-        plt.subplot(2,2,2)
-        plt.imshow(psf)
-        plt.title('PSF')
-        plt.subplot(2,2,3)
-        plt.imshow(obs)
-        plt.title('Observed Galaxy\n($PSNR={:.2f}$)'.format(PSNR(gt, obs)))
-        plt.subplot(2,2,4)
-        plt.imshow(rec)
-        plt.title('Recovered Galaxy\n($PSNR={:.2f}$)'.format(PSNR(gt, rec)))
-        plt.savefig(os.path.join(result_path, 'visualization', f"vis_{I}_{idx}.jpg"), bbox_inches='tight')
-        plt.close()
+        if idx < 100:
+            plt.figure(figsize=(10,10))
+            plt.subplot(2,2,1)
+            plt.imshow(gt)
+            plt.title('Sheared Galaxy')
+            plt.subplot(2,2,2)
+            plt.imshow(psf)
+            plt.title('PSF')
+            plt.subplot(2,2,3)
+            plt.imshow(obs)
+            plt.title('Observed Galaxy\n($PSNR={:.2f}$)'.format(PSNR(gt, obs)))
+            plt.subplot(2,2,4)
+            plt.imshow(rec)
+            plt.title('Recovered Galaxy\n($PSNR={:.2f}$)'.format(PSNR(gt, rec)))
+            plt.savefig(os.path.join(result_path, 'visualization', f"vis_{I}_{idx}.jpg"), bbox_inches='tight')
+            plt.close()
         
         obs_psnr.append(PSNR(gt, obs))
         rec_psnr.append(PSNR(gt, rec))
@@ -316,14 +317,15 @@ if __name__ =="__main__":
     
     parser = argparse.ArgumentParser(description='Arguments for tesing unrolled ADMM.')
     parser.add_argument('--n_iters', type=int, default=8)
-    parser.add_argument('--poisson', type=bool, default=True)
+    parser.add_argument('--poisson', type=bool, default=False)
     parser.add_argument('--PnP', type=bool, default=True)
-    parser.add_argument('--n_epochs', type=int, default=20, choices=[10, 20, 30, 40, 50])
+    parser.add_argument('--n_epochs', type=int, default=10, choices=[10, 20, 30, 40, 50])
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
 
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
-    test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, I=opt.I)
+    
+    # test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, I=opt.I)
     test_shear(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, I=opt.I)
     plot_results(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, I=opt.I)
