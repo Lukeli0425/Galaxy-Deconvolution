@@ -317,15 +317,15 @@ if __name__ =="__main__":
     
     parser = argparse.ArgumentParser(description='Arguments for tesing unrolled ADMM.')
     parser.add_argument('--n_iters', type=int, default=8)
-    parser.add_argument('--poisson', type=bool, default=False)
-    parser.add_argument('--PnP', type=bool, default=True)
-    parser.add_argument('--n_epochs', type=int, default=10, choices=[10, 20, 30, 40, 50])
+    parser.add_argument('--poisson', type=bool, default=True)
+    parser.add_argument('--PnP', action="store_true")
+    parser.add_argument('--n_epochs', type=int, default=20, choices=[10, 20, 30, 40, 50])
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
-
+    
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
     
-    # test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, I=opt.I)
+    test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, I=opt.I)
     test_shear(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, I=opt.I)
     plot_results(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, I=opt.I)
