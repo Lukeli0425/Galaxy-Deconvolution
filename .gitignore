@@ -1,10 +1,7 @@
 # Large data
 data/
 dataset/
-dataset_noisy_psf/
-plug_and_play_admm/denoiser.pth
-denoiser.pth
-Papers/
+webbpsf-data/
 
 # Vscode setting
 .vscode/
