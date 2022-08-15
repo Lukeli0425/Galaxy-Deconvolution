@@ -168,7 +168,7 @@ class Galaxy_Dataset(Dataset):
             gal.drawImage(gal_image, scale=self.pixel_scale, offset=(dx,dy), method='auto')
             gal_image += sky_level * (self.pixel_scale**2)
             
-            psf_image = galsim.ImageF(self.img_size[0]-1, self.img_size[1]-1)
+            psf_image = galsim.ImageF(self.img_size[0], self.img_size[1])
             psf.drawImage(psf_image, scale=self.pixel_scale, method='auto')
             
             gal_image = torch.from_numpy(gal_image.array)
