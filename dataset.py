@@ -171,9 +171,9 @@ class Galaxy_Dataset(Dataset):
             psf_image = galsim.ImageF(self.img_size[0]-1, self.img_size[1]-1)
             psf.drawImage(psf_image, scale=self.pixel_scale, method='auto')
             
-            gal_image = torch.from_numpy(gal_image)
+            gal_image = torch.from_numpy(gal_image.array)
             gal_image = torch.max(torch.zeros_like(gal_image), gal_image)
-            psf_image = torch.from_numpy(psf_image)
+            psf_image = torch.from_numpy(psf_image.array)
             psf_image = torch.max(torch.zeros_like(psf_image), psf_image)
             
             # Concolve with PSF
