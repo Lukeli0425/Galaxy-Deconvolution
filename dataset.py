@@ -13,6 +13,7 @@ import galsim
 import webbpsf
 from utils import PSNR
 
+# webbpsf.setup_logging('ERROR')
 
 class Galaxy_Dataset(Dataset):
     """A galaxy image dataset generated with Galsim."""
@@ -320,26 +321,37 @@ class JWST_Dataset():
         random_seed = 42579
         psnr_list = []
         
-        psfs = dict() 
-        insts = ['NIRCam','NIRSpec','NIRISS', 'MIRI', 'FGS']
+        psfs = dict() # all PSF images
+        insts = ['NIRCam', 'NIRSpec','NIRISS', 'MIRI', 'FGS']
         for instname in insts:
             inst = webbpsf.instrument(instname)
             filters = inst.filter_list
             for filter in filters:
                 inst.filter = filter
                 try:
+                    logging.info(f'Calculating PSF: {instname} {filter}')
                     psf_list = inst.calc_psf(fov_pixels=self.fov_pixels, oversample=1)
                     psf = torch.from_numpy(psf_list[0].data)
                     psf = torch.max(torch.zeros_like(psf), psf) # set negative pixels to zero
                     psf /= psf.sum()
-                    psfs[instname+filter] = psf
+                    psfs[instname+filter] = (psf, inst.pixelscale)
                 except:
                     pass
-        psf_names = np.random.shuffle(psfs.keys())
+        psf_names = list(psfs.keys())
+        np.random.shuffle(psf_names)
         train_psfs = psf_names[:int(len(psf_names) * self.train_split)]
         test_psfs = psf_names[int(len(psf_names) * self.train_split):]
         for k in range(self.n_total):
             idx = self.sequence[k] # index pf galaxy in the catalog
+            
+            # Choose a PSF 
+            if k < self.n_train:
+                psf_name = np.random.choice(train_psfs)
+            else:
+                psf_name = np.random.choice(test_psfs)
+            psf_image, pixel_scale = psfs[psf_name]
+            
+            
             # Galaxy parameters 
             rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
             sky_level = 2.5e4                   # ADU / arcsec^2
@@ -366,18 +378,12 @@ class JWST_Dataset():
             dx = rng() - 0.5
             dy = rng() - 0.5
             
-            gal_image = galsim.ImageF(self.img_size[0], self.img_size[1])
-            gal.drawImage(gal_image, scale=self.pixel_scale, offset=(dx,dy), method='auto')
-            gal_image += sky_level * (self.pixel_scale**2)
+            gal_image = galsim.ImageF(self.fov_pixels, self.fov_pixels)
+            gal.drawImage(gal_image, scale=pixel_scale, offset=(dx,dy), method='auto')
+            gal_image += sky_level * (pixel_scale**2)
             gal_image = torch.from_numpy(gal_image.array)
             gal_image = torch.max(torch.zeros_like(gal_image), gal_image)
             
-            # Choose a PSF 
-            if k < self.n_train:
-                psf_name = np.random.choice(train_psfs)
-            else:
-                psf_name = np.random.choice(test_psfs)
-            psf_image = psfs[psf_name]
             
             # Convolution via FFT
             conv = ifftshift(ifft2(fft2(psf_image) * fft2(gal_image))).real
@@ -409,7 +415,7 @@ class JWST_Dataset():
                 plt.title('Simulated Galaxy\n($e_1={:.3f}$, $e_2={:.3f}$)'.format(gal_g1, gal_g2))
                 plt.subplot(2,2,3)
                 plt.imshow(psf_image)
-                plt.title('PSF: {}')
+                plt.title(f'PSF: {psf_name}')
                 plt.subplot(2,2,4)
                 plt.imshow(obs)
                 plt.title('Observed Galaxy\n($PSNR={:.2f}$)'.format(psnr))
