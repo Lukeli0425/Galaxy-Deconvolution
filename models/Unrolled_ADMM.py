@@ -150,11 +150,11 @@ class Unrolled_ADMM(nn.Module):
 		self.V = V_Update_Poisson() if poisson else	V_Update_Gaussian() # Poisson MLE
 		self.Z = Z_Update_ResUNet() if PnP else Z_Update() # BW Denoiser
 	
-	def init_l2(self, y, H, M):
+	def init_l2(self, y, H, alpha):
 		# N, C, H, W = y.size()
 		Ht, HtH_fft = torch.conj(H), torch.abs(H)**2
-		rhs = tfft.fftn( conv_fft_batch(Ht, y/M), dim=[2,3] )
-		lhs = HtH_fft + (1/M)
+		rhs = tfft.fftn( conv_fft_batch(Ht, y/alpha), dim=[2,3] )
+		lhs = HtH_fft + (1/alpha)
 		x0 = torch.real(tfft.ifftn(rhs/lhs, dim=[2,3]))
 		x0 = torch.clamp(x0,0,1)
 		return x0
@@ -190,4 +190,4 @@ class Unrolled_ADMM(nn.Module):
 			u2 = u2 + conv_fft_batch(H,x) - v
 			x_list.append(x)
 
-		return x_list
+		return x_list[-1] * alpha

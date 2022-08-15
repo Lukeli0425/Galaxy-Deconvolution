@@ -5,11 +5,13 @@ import argparse
 import numpy as np
 from skimage import io
 import torch
+from torch.fft import fft2, ifft2, fftshift, ifftshift
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader, random_split
 import matplotlib.pyplot as plt
 import galsim
 from utils import PSNR
+
 
 class Galaxy_Dataset(Dataset):
     """A galaxy image dataset generated with Galsim."""
@@ -83,9 +85,9 @@ class Galaxy_Dataset(Dataset):
             with open(self.info_file, 'w') as f:
                 json.dump(self.info, f)
             logging.info(f'Successfully created {self.info_file}.')
-            self.create_imgaes()
+            self.create_images()
 
-    def create_imgaes(self):
+    def create_images(self):
         """Generate and save real galaxy images with Galsim."""
         logging.info('Simulating real galaxy images.')
         random_seed = 425879
@@ -156,34 +158,46 @@ class Galaxy_Dataset(Dataset):
             else:
                 psf = psf_ori
             
-            final = galsim.Convolve([psf, gal]) # Make the combined profile
+            # final = galsim.Convolve([psf, gal]) # Make the combined profile
             # Offset by up to 1/2 pixel in each direction
             dx = rng() - 0.5
             dy = rng() - 0.5
 
             # Dobs the profile
-            obs = galsim.ImageF(self.img_size[0], self.img_size[1])
-            final.drawImage(obs, scale=self.pixel_scale, offset=(dx,dy), method='auto')
             gal_image = galsim.ImageF(self.img_size[0], self.img_size[1])
             gal.drawImage(gal_image, scale=self.pixel_scale, offset=(dx,dy), method='auto')
-            psf_image = galsim.ImageF(self.img_size[0]-1, self.img_size[1]-1)
-            psf.drawImage(psf_image, scale=self.pixel_scale, offset=(dx,dy), method='auto')
-            
             gal_image += sky_level * (self.pixel_scale**2)
+            
+            psf_image = galsim.ImageF(self.img_size[0]-1, self.img_size[1]-1)
+            psf.drawImage(psf_image, scale=self.pixel_scale, method='auto')
+            
+            gal_image = torch.from_numpy(gal_image)
+            gal_image = torch.max(torch.zeros_like(gal_image), gal_image)
+            psf_image = torch.from_numpy(psf_image)
+            psf_image = torch.max(torch.zeros_like(psf_image), psf_image)
+            
+            # Concolve with PSF
+            conv = ifftshift(ifft2(fft2(psf_image) * fft2(gal_image))).real
+            conv = torch.max(torch.zeros_like(conv), conv) # set negative pixels to zero
+
+            # Add CCD noise (Poisson + Gaussian)
+            obs = torch.poisson(conv) + torch.normal(mean=torch.zeros_like(conv), std=torch.ones_like(conv))
+            obs = torch.max(torch.zeros_like(obs), obs) # set negative pixels to zero
+            
             # gal_image.addNoise(galsim.PoissonNoise(rng)) # no noise for ground truth
-            obs += sky_level * (self.pixel_scale**2) # Add a constant background level
-            obs.addNoise(galsim.CCDNoise(rng, gain=gain, read_noise=read_noise)) # add noise for observation
+            # obs += sky_level * (self.pixel_scale**2) # Add a constant background level
+            # obs.addNoise(galsim.CCDNoise(rng, gain=gain, read_noise=read_noise)) # add noise for observation
             # obs.addNoise(galsim.PoissonNoise(rng))
-            psf_image = psf_image*psf_flux + sky_level * (self.pixel_scale**2) # Add a constant background level
-            psf_image.addNoise(galsim.CCDNoise(rng, gain=gain, read_noise=read_noise)) # add noise for observation
+            # psf_image = psf_image*psf_flux + sky_level * (self.pixel_scale**2) # Add a constant background level
+            # psf_image.addNoise(galsim.CCDNoise(rng, gain=gain, read_noise=read_noise)) # add noise for observation
             # psf_image.addNoise(galsim.PoissonNoise(rng))
 
             # Save images
-            psnr = PSNR(obs.array, gal_image.array)
+            psnr = PSNR(obs, gal_image)
             psnr_list.append(psnr)
-            io.imsave(os.path.join(self.data_path, 'gt', f"gt_{self.I}_{k}.tiff"), gal_image.array, check_contrast=False)
-            io.imsave(os.path.join(self.data_path, 'psf', f"psf_{self.I}_{k}.tiff"), psf_image.array, check_contrast=False)
-            io.imsave(os.path.join(self.data_path, 'obs', f"obs_{self.I}_{k}.tiff"), obs.array, check_contrast=False)
+            io.imsave(os.path.join(self.data_path, 'gt', f"gt_{self.I}_{k}.tiff"), gal_image, check_contrast=False)
+            io.imsave(os.path.join(self.data_path, 'psf', f"psf_{self.I}_{k}.tiff"), psf_image, check_contrast=False)
+            io.imsave(os.path.join(self.data_path, 'obs', f"obs_{self.I}_{k}.tiff"), obs, check_contrast=False)
             logging.info("Simulating Image:  [{:}/{:}]   PSNR={:.2f}".format(k+1,self.real_galaxy_catalog.nobjects, psnr))
 
             # Visualization
@@ -193,13 +207,13 @@ class Galaxy_Dataset(Dataset):
                 plt.imshow(gal_ori_image.array)
                 plt.title('Original Galaxy')
                 plt.subplot(2,2,2)
-                plt.imshow(gal_image.array)
+                plt.imshow(gal_image)
                 plt.title('Simulated Galaxy\n($e_1={:.3f}$, $e_2={:.3f}$)'.format(gal_g1, gal_g2))
                 plt.subplot(2,2,3)
-                plt.imshow(psf_image.array)
+                plt.imshow(psf_image)
                 plt.title('PSF\n($e_1={:.3f}$, $e_2={:.3f}$, FWHM={:.2f})'.format(atmos_g1, atmos_g2, atmos_fwhm) if self.atmos else 'PSF')
                 plt.subplot(2,2,4)
-                plt.imshow(obs.array)
+                plt.imshow(obs)
                 plt.title('Observed Galaxy\n($PSNR={:.2f}$)'.format(psnr))
                 plt.savefig(os.path.join(self.data_path, 'visualization', f"COSMOS_{self.I}_{k}.jpg"), bbox_inches='tight')
                 plt.close()
@@ -216,22 +230,54 @@ class Galaxy_Dataset(Dataset):
         
         psf_path = os.path.join(self.data_path, 'psf')
         psf = torch.from_numpy(io.imread(os.path.join(psf_path, f"psf_{self.I}_{idx}.tiff"))).unsqueeze(0)
-        psf = (psf - psf.min())/(psf.max() - psf.min())
-        psf /= psf.sum()
+        # psf = (psf - psf.min())/(psf.max() - psf.min())
+        # psf /= psf.sum()
 
         obs_path = os.path.join(self.data_path, 'obs')
         obs = torch.from_numpy(io.imread(os.path.join(obs_path, f"obs_{self.I}_{idx}.tiff"))).unsqueeze(0)
-        obs = (obs - obs.min())/(obs.max() - obs.min())
+        # obs = (obs - obs.min())/(obs.max() - obs.min())
 
         gt_path = os.path.join(self.data_path, 'gt')
         gt = torch.from_numpy(io.imread(os.path.join(gt_path, f"gt_{self.I}_{idx}.tiff"))).unsqueeze(0)
-        gt = (gt - gt.min())/(gt.max() - gt.min())
+        # gt = (gt - gt.min())/(gt.max() - gt.min())
 
-        M = obs.ravel().mean()/0.33
+        M = obs.ravel().mean()
         M = torch.Tensor(M).view(1,1,1)
 
         return (obs, psf, M), gt
 
+class JWST_Dataset():
+    def __init__(self, data_path='/mnt/WD6TB/tianaoli/dataset/', COSMOS_path='/mnt/WD6TB/tianaoli/', 
+                I=23.5, fov_pixels=64):
+        self.fov_pixels = fov_pixels
+        self.data_path = os.path.join(data_path, f'JWST_{self.I}')
+        
+        if not os.path.exists(data_path):
+            os.mkdir(data_path)
+        
+        
+    def __len__(self):
+        return 0
+        
+    def __getitem__(self, i):
+        pass
+
+    def create_images(self):
+        logging.info('Simulating JWST images.')
+        
+        # Create directory for the dataset
+        if not os.path.exists(self.data_path):
+            os.mkdir(self.data_path)
+        if not os.path.exists(os.path.join(self.data_path, 'obs')): # create directory for obs images
+            os.mkdir(os.path.join(self.data_path, 'obs'))
+        if not os.path.exists(os.path.join(self.data_path, 'gt')): # create directory for ground truth
+            os.mkdir(os.path.join(self.data_path, 'gt'))
+        if not os.path.exists(os.path.join(self.data_path, 'psf')): # create directory for PSF
+            os.mkdir(os.path.join(self.data_path, 'psf'))
+        if not os.path.exists(os.path.join(self.data_path, 'visualization')): # create directory for visualization
+            os.mkdir(os.path.join(self.data_path, 'visualization'))
+            
+            
 
 def get_dataloader(train_test_split=0.857, batch_size=32, I=23.5):
     """Create dataloaders from Galaxy Dataset."""
@@ -251,4 +297,5 @@ if __name__ == "__main__":
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
-    dataset = Galaxy_Dataset(atmos=False, I=opt.I, pixel_scale=0.05)
+    LSST_Dataset = Galaxy_Dataset(atmos=True, I=opt.I, pixel_scale=0.2)
+    LSST_Dataset.create_images()
