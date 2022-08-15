@@ -464,8 +464,13 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
     parser = argparse.ArgumentParser(description='Arguments for dataset.')
+    parser.add_argument('--simulate', type=str, default='JWST', choices=['LSST', 'JWST', 'None'])
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
-    LSST_Dataset = Galaxy_Dataset(atmos=True, I=opt.I, pixel_scale=0.2)
-    LSST_Dataset.create_images()
+    if opt.simulate == 'LSST':
+        LSST_Dataset = Galaxy_Dataset(atmos=True, I=opt.I, pixel_scale=0.2)
+        LSST_Dataset.create_images()
+    elif  opt.simulate == 'JWST':
+        JWST_Dataset = JWST_Dataset(I=opt.I, fov_pixels=64)
+        JWST_Dataset.create_images()
