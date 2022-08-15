@@ -195,9 +195,9 @@ class Galaxy_Dataset(Dataset):
             # Save images
             psnr = PSNR(obs, gal_image)
             psnr_list.append(psnr)
-            io.imsave(os.path.join(self.data_path, 'gt', f"gt_{self.I}_{k}.tiff"), gal_image, check_contrast=False)
-            io.imsave(os.path.join(self.data_path, 'psf', f"psf_{self.I}_{k}.tiff"), psf_image, check_contrast=False)
-            io.imsave(os.path.join(self.data_path, 'obs', f"obs_{self.I}_{k}.tiff"), obs, check_contrast=False)
+            io.imsave(os.path.join(self.data_path, 'gt', f"gt_{self.I}_{k}.tiff"), np.array(gal_image), check_contrast=False)
+            io.imsave(os.path.join(self.data_path, 'psf', f"psf_{self.I}_{k}.tiff"), np.array(psf_image), check_contrast=False)
+            io.imsave(os.path.join(self.data_path, 'obs', f"obs_{self.I}_{k}.tiff"), np.array(obs), check_contrast=False)
             logging.info("Simulating Image:  [{:}/{:}]   PSNR={:.2f}".format(k+1,self.real_galaxy_catalog.nobjects, psnr))
 
             # Visualization
