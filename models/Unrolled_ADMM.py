@@ -169,7 +169,7 @@ class Unrolled_ADMM(nn.Module):
 		H =  H.to(device)
 		At, HtH_fft = torch.conj(H), torch.abs(H)**2
 		rho1_iters, rho2_iters, lam_iters = self.init(kernel, alpha) 	# Hyperparameters
-		x = self.init_l2(y, H, alpha)	# Initialization using Weiner Deconvolution
+		x = self.init_l2(y, H, alpha)	# Initialization using Wiener Deconvolution
 		x_list.append(x)
 		# Other ADMM variables
 		z = Variable(x.data.clone()).to(device)
@@ -190,4 +190,4 @@ class Unrolled_ADMM(nn.Module):
 			u2 = u2 + conv_fft_batch(H,x) - v
 			x_list.append(x)
 
-		return x_list[-1] * alpha
+		return x_list[-1] #* alpha

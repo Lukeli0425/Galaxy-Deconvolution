@@ -448,16 +448,19 @@ class JWST_Dataset():
         # gt = torch.from_numpy(io.imread(os.path.join(gt_path, f"gt_{self.I}_{idx}.tiff"))).unsqueeze(0)
         # gt = (gt - gt.min())/(gt.max() - gt.min())
 
-        M = obs.ravel().mean()
+        M = obs.ravel().mean().float()
         M = torch.Tensor(M).view(1,1,1)
 
-        return (obs, psf, M), gt
+        return (obs, psf, M), gt/M
             
             
 
-def get_dataloader(train_test_split=0.857, batch_size=32, I=23.5):
+def get_dataloader(survey='JWST', I=23.5, train_test_split=0.857, batch_size=32):
     """Create dataloaders from Galaxy Dataset."""
-    train_dataset = Galaxy_Dataset(train=True, I=I, data_path='/mnt/WD6TB/tianaoli/dataset/')
+    if survey == 'LSST':
+        train_dataset = Galaxy_Dataset(train=True, I=I, data_path='/mnt/WD6TB/tianaoli/dataset/')
+    elif survey == 'JWST':
+        train_dataset = JWST_Dataset(train=True, I=I, fov_pixels=64)
     train_size = int(train_test_split * len(train_dataset))
     val_size = len(train_dataset) - train_size
     train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])
@@ -470,13 +473,13 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
     parser = argparse.ArgumentParser(description='Arguments for dataset.')
-    parser.add_argument('--simulate', type=str, default='JWST', choices=['LSST', 'JWST', 'None'])
+    parser.add_argument('--survey', type=str, default='JWST', choices=['LSST', 'JWST'])
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
-    if opt.simulate == 'LSST':
+    if opt.survey == 'LSST':
         LSST_Dataset = Galaxy_Dataset(atmos=True, I=opt.I, pixel_scale=0.2)
         LSST_Dataset.create_images()
-    elif  opt.simulate == 'JWST':
+    elif opt.survey == 'JWST':
         JWST_Dataset = JWST_Dataset(I=opt.I, fov_pixels=64)
         JWST_Dataset.create_images()

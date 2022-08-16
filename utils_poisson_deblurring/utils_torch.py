@@ -71,11 +71,11 @@ def psf_to_otf(ker, size):
 	psf = torch.zeros(size)
 	# circularly shift
 
-	centre = ker.shape[2]//2 + 1
-	psf[:, :, :centre, :centre] = ker[:, :, (centre-1):, (centre-1):]
-	psf[:, :, :centre, -(centre-1):] = ker[:, :, (centre-1):, :(centre-1)]
-	psf[:, :, -(centre-1):, :centre] = ker[:, :, : (centre-1), (centre-1):]
-	psf[:, :, -(centre-1):, -(centre-1):] = ker[:, :, :(centre-1), :(centre-1)]
+	center = ker.shape[2]//2 
+	psf[:, :, :center, :center] = ker[:, :, center:, center:]
+	psf[:, :, :center, -center:] = ker[:, :, center:, :center]
+	psf[:, :, -center:, :center] = ker[:, :, : center, center:]
+	psf[:, :, -center:, -center:] = ker[:, :, :center, :center]
 	# compute the otf
 	# otf = torch.rfft(psf, 3, onesided=False)
 	otf = torch.fft.fftn(psf, dim=[2,3])

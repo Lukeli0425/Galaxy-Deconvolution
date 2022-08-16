@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from skimage import io
 import torch
 from torch.utils.data import DataLoader
-from dataset import Galaxy_Dataset
+from dataset import Galaxy_Dataset, JWST_Dataset
 from models.Unrolled_ADMM import Unrolled_ADMM
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 from utils import PSNR, estimate_shear
@@ -32,17 +32,17 @@ class ADMM_deconvolver:
         """Deconvolve PSF with unrolled ADMM model."""
         psf = torch.from_numpy(psf).unsqueeze(dim=0).unsqueeze(dim=0) if type(psf) is np.ndarray else psf
         obs = torch.from_numpy(obs).unsqueeze(dim=0).unsqueeze(dim=0) if type(obs) is np.ndarray else obs
-        M = obs.ravel().mean()/0.33
-        M = torch.Tensor(M).view(1,1,1,1)
+        alpha = obs.ravel().mean()/0.33
+        alpha = torch.Tensor(alpha.float()).view(1,1,1,1)
 
-        output = self.model(obs.to(self.device), psf.to(self.device), M.to(self.device))
-        rec = output[-1].squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+        output = self.model(obs.to(self.device), psf.to(self.device), alpha.to(self.device))
+        rec = (output.cpu() * alpha.cpu()).squeeze(dim=0).squeeze(dim=0).numpy()
 
         return rec
 
-def test(n_iters, poisson, PnP, n_epochs, I):
+def test(n_iters, poisson, PnP, n_epochs, survey, I):
     """Test the model."""     
-    logging.info(f'Start testing unrolled {"PnP-" if PnP else ""}ADMM model with {"Poisson" if poisson else "Gaussian"} likelihood.')
+    logging.info(f'Start testing unrolled {"PnP-" if PnP else ""}ADMM model with {"Poisson" if poisson else "Gaussian"} likelihood on {survey} data.')
     results = {} # dictionary to record the test results
     result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_epochs}_{I}/'
     results_file = os.path.join(result_path, 'results.json')
@@ -54,14 +54,17 @@ def test(n_iters, poisson, PnP, n_epochs, I):
     if not os.path.exists(os.path.join(result_path, 'visualization')): # create directory for visualization
         os.mkdir(os.path.join(result_path, 'visualization'))
     
-    test_dataset = Galaxy_Dataset(train=False, I=I)
+    if survey == 'JWST':
+        test_dataset = JWST_Dataset(train=False, I=I)
+    elif survey == 'LSST':
+        test_dataset = Galaxy_Dataset(train=False, I=I)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = Unrolled_ADMM(n_iters=n_iters, poisson=poisson, PnP=PnP)
     model.to(device)
     
     # Load the model
-    model_file = f'./saved_models/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_epochs}epochs.pth'
+    model_file = f'./saved_models/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{survey}{I}_{n_epochs}epochs.pth'
     try:
         model.load_state_dict(torch.load(model_file, map_location=torch.device(device)))
     except:
@@ -73,14 +76,13 @@ def test(n_iters, poisson, PnP, n_epochs, I):
     obs_psnr = []
     rec_psnr = []
     model.eval()
-    for idx, ((obs, psf, M), gt) in enumerate(test_loader):
+    for idx, ((obs, psf, alpha), gt) in enumerate(test_loader):
         with torch.no_grad():
-            obs, psf, M, gt = obs.to(device), psf.to(device), M.to(device), gt.to(device)
-            output = model(obs, psf, M)
-            rec = output[-1]
-            loss = loss_fn(gt, rec)
+            obs, psf, alpha, gt = obs.to(device), psf.to(device), alpha.to(device), gt.to(device)
+            rec = model(obs, psf, alpha) #* M.view(batch_size,1,1)
+            loss = loss_fn(gt.squeeze(dim=1), rec.squeeze(dim=1))
             test_loss += loss.item()
-            rec *= M.view(1,1,1)
+            rec *= alpha.view(1,1,1)
             
             gt = gt.squeeze(dim=0).squeeze(dim=0).cpu()
             psf = psf.squeeze(dim=0).squeeze(dim=0).cpu()
@@ -131,9 +133,12 @@ def test(n_iters, poisson, PnP, n_epochs, I):
 
     return results
 
-def test_shear(n_iters, poisson, PnP, n_epochs, I):
+def test_shear(n_iters, poisson, PnP, n_epochs, survey, I):
     """Estimate shear with saved model."""
-    test_dataset = Galaxy_Dataset(train=False, I=I)
+    if survey == 'JWST':
+        test_dataset = JWST_Dataset(train=False, I=I)
+    elif survey == 'LSST':
+        test_dataset = Galaxy_Dataset(train=False, I=I)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
     gt_shear = []
@@ -153,7 +158,7 @@ def test_shear(n_iters, poisson, PnP, n_epochs, I):
         logging.warning(f'Failed loading in {results_file}.')
         results = {}
 
-    model_file = f'./saved_models/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_epochs}epochs.pth'
+    model_file = f'./saved_models/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{survey}{I}_{n_epochs}epochs.pth'
     model = ADMM_deconvolver(n_iters=n_iters, poisson=poisson, PnP=PnP, model_file=model_file)
     
     for idx, ((obs, psf, M), gt) in enumerate(test_loader):
@@ -229,7 +234,7 @@ def test_shear(n_iters, poisson, PnP, n_epochs, I):
     
     return results
 
-def plot_results(n_iters, poisson, PnP, n_epochs, I):
+def plot_results(n_iters, poisson, PnP, n_epochs, survey, I):
     result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_epochs}_{I}/'
     results_file = os.path.join(result_path, 'results.json')
     if not os.path.exists(result_path):
@@ -316,16 +321,17 @@ if __name__ =="__main__":
     logging.basicConfig(level=logging.INFO)
     
     parser = argparse.ArgumentParser(description='Arguments for tesing unrolled ADMM.')
-    parser.add_argument('--n_iters', type=int, default=16)
+    parser.add_argument('--n_iters', type=int, default=8)
     parser.add_argument('--poisson', type=bool, default=True)
     parser.add_argument('--PnP', action="store_true")
-    parser.add_argument('--n_epochs', type=int, default=10, choices=[10, 20, 30, 40, 50])
+    parser.add_argument('--n_epochs', type=int, default=8)
+    parser.add_argument('--survey', type=str, default='JWST', choices=['LSST', 'JWST'])
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
     
-    test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, I=opt.I)
-    test_shear(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, I=opt.I)
-    plot_results(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, I=opt.I)
+    test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
+    test_shear(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
+    plot_results(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
