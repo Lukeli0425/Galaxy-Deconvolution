@@ -77,21 +77,23 @@ class Galaxy_Dataset(Dataset):
             self.info = {'atmos':atmos, 'I':I, 'img_size':img_size, 'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'pixel_scale':pixel_scale, 'seeing':seeing}
             # Generate random sequence for data
             logging.warning(f'Failed reading information from {self.info_file}.')
-            self.sequence = [i for i in range(self.n_total)]
-            np.random.shuffle(self.sequence)
-            n_train = int(self.train_split * self.n_total)
-            self.info['n_total'] = self.n_total
-            self.info['n_train'] = n_train
-            self.info['n_test'] = self.real_galaxy_catalog.nobjects - n_train
-            self.info['sequence'] = self.sequence
-            with open(self.info_file, 'w') as f:
-                json.dump(self.info, f)
-            logging.info(f'Successfully created {self.info_file}.')
-            self.create_images()
+            
 
     def create_images(self):
-        """Generate and save real galaxy images with Galsim."""
-        logging.info('Simulating real galaxy images.')
+        """Generate and save LSST images with Galsim."""
+        logging.info('Simulating LSST images.')
+        
+        self.sequence = [i for i in range(self.n_total)]
+        np.random.shuffle(self.sequence)
+        n_train = int(self.train_split * self.n_total)
+        self.info['n_total'] = self.n_total
+        self.info['n_train'] = n_train
+        self.info['n_test'] = self.real_galaxy_catalog.nobjects - n_train
+        self.info['sequence'] = self.sequence
+        with open(self.info_file, 'w') as f:
+            json.dump(self.info, f)
+        logging.info(f'Successfully created {self.info_file}.')
+        
         random_seed = 425879
         psnr_list = []
         for k in range(self.n_total):
@@ -143,23 +145,25 @@ class Galaxy_Dataset(Dataset):
             gal = gal.shear(e=gal_e, beta=gal_beta * galsim.radians) # Apply the desired shear
             gal = gal.magnify(gal_mu) # Also apply a magnification mu = ( (1-kappa)^2 - |gamma|^2 )^-1, this conserves surface brightness, so it scales both the area and flux.
             
-            # Simulated PSF (optical + atmospgeric)
+            # Simulated PSF (optical + atmospheric)
             # Define the optical component of PSF
             lam_over_diam = lam * 1.e-9 / tel_diam # radians
             lam_over_diam *= 206265  # arcsec
-            optics = galsim.OpticalPSF( lam_over_diam,
+            optics = galsim.OpticalPSF( lam_over_diam = lam_over_diam,
                                         defocus = opt_defocus,
                                         coma1 = opt_c1, coma2 = opt_c2,
                                         astig1 = opt_a1, astig2 = opt_a2,
                                         obscuration = opt_obscuration,
                                         flux=1)
-            if self.atmos: # Define the atmospheric component of PSF
-                atmos = galsim.Kolmogorov(fwhm=atmos_fwhm, flux=1) # Note: the flux here is the default flux=1.
-                atmos = atmos.shear(e=atmos_e, beta=atmos_beta*galsim.radians)
-                psf = galsim.Convolve([atmos, optics], real_space=True)
-            else:
-                psf = psf_ori
+            # Define the atmospheric component of PSF
+            atmos = galsim.Kolmogorov(fwhm=atmos_fwhm, flux=1) # Note: the flux here is the default flux=1.
+            atmos = atmos.shear(e=atmos_e, beta=atmos_beta*galsim.radians)
+            psf = galsim.Convolve([atmos, optics], real_space=True)
             
+            psf_image = galsim.ImageF(self.img_size[0], self.img_size[1])
+            psf.drawImage(psf_image, scale=self.pixel_scale, method='auto')
+            psf_image = torch.from_numpy(psf_image.array)
+            psf_image = torch.max(torch.zeros_like(psf_image), psf_image)
             # final = galsim.Convolve([psf, gal]) # Make the combined profile
             # Offset by up to 1/2 pixel in each direction
             dx = rng() - 0.5
@@ -169,14 +173,9 @@ class Galaxy_Dataset(Dataset):
             gal_image = galsim.ImageF(self.img_size[0], self.img_size[1])
             gal.drawImage(gal_image, scale=self.pixel_scale, offset=(dx,dy), method='auto')
             gal_image += sky_level * (self.pixel_scale**2)
-            
-            psf_image = galsim.ImageF(self.img_size[0], self.img_size[1])
-            psf.drawImage(psf_image, scale=self.pixel_scale, method='auto')
-            
             gal_image = torch.from_numpy(gal_image.array)
             gal_image = torch.max(torch.zeros_like(gal_image), gal_image)
-            psf_image = torch.from_numpy(psf_image.array)
-            psf_image = torch.max(torch.zeros_like(psf_image), psf_image)
+            
             
             # Concolve with PSF
             conv = ifftshift(ifft2(fft2(psf_image) * fft2(gal_image))).real
@@ -248,10 +247,82 @@ class Galaxy_Dataset(Dataset):
 
         return (obs, psf, M), gt
 
-class JWST_Dataset():
-    def __init__(self,  train=True, data_path='/mnt/WD6TB/tianaoli/dataset/', train_split = 0.7, 
-                    COSMOS_path='/mnt/WD6TB/tianaoli/', I=23.5, fov_pixels=64, gal_max_shear=0.5):
+
+def get_Webb_PSF(insts=['NIRCam', 'NIRSpec','NIRISS', 'MIRI', 'FGS']):
+    """Calculate all PSFs for given JWST instruments.
+
+    Args:
+        insts (list, optional): Instruments of JWST for PSF calculation. Defaults to ['NIRCam', 'NIRSpec','NIRISS', 'MIRI', 'FGS'].
+
+    Returns:
+        tuple: List of PSF names and dictionary containing PSF images.
+    """
+    psfs = dict() # all PSF images
+    for instname in insts:
+        inst = webbpsf.instrument(instname)
+        filters = inst.filter_list
+        for filter in filters:
+            inst.filter = filter
+            try:
+                logging.info(f'Calculating Webb PSF: {instname} {filter}')
+                psf_list = inst.calc_psf(fov_pixels=self.fov_pixels, oversample=1)
+                psf = torch.from_numpy(psf_list[0].data)
+                psf = torch.max(torch.zeros_like(psf), psf) # set negative pixels to zero
+                psf /= psf.sum()
+                psfs[instname+filter] = (psf, inst.pixelscale)
+            except:
+                pass
+    psf_names = list(psfs.keys())
+
+    return psf_names, psfs
+
+def get_COSMOS_Galaxy(catalog, idx, gal_flux, sky_level, gal_e, gal_beta, theta, gal_mu, fov_pixels, pixel_scale, rng):
+
+    # Read out real galaxy from catalog
+    gal_ori = galsim.RealGalaxy(catalog, index = idx, flux = gal_flux)
+    psf_ori = catalog.getPSF(i=idx)
+    gal_ori_image = catalog.getGalImage(idx)
+    psf_ori_image = catalog.getPSFImage(idx)
+
+    gal_ori = galsim.Convolve([psf_ori, gal_ori]) # concolve wth original PSF of HST
+    gal = gal_ori.rotate(theta * galsim.radians) # Rotate by a random angle
+    gal = gal.shear(e=gal_e, beta=gal_beta * galsim.radians) # Apply the desired shear
+    gal = gal.magnify(gal_mu) # Also apply a magnification mu = ( (1-kappa)^2 - |gamma|^2 )^-1, this conserves surface brightness, so it scales both the area and flux.
+    
+    # Offset by up to 1/2 pixel in each direction
+    dx = rng() - 0.5
+    dy = rng() - 0.5
+    
+    gal_image = galsim.ImageF(fov_pixels, fov_pixels)
+    gal.drawImage(gal_image, scale=pixel_scale, offset=(dx,dy), method='auto')
+    gal_image += sky_level * (pixel_scale**2)
+    gal_image = torch.from_numpy(gal_image.array)
+    gal_image = torch.max(torch.zeros_like(gal_image), gal_image)
+    
+    return gal_image, gal_ori_image.array
+
+
+class JWST_Dataset(Dataset):
+    """Simulated Galaxy Image Dataset inherited from torch.utils.data.Dataset."""
+    def __init__(self, survey, I, fov_pixels, gal_max_shear, 
+                train, train_split = 0.7, 
+                data_path='/mnt/WD6TB/tianaoli/dataset/', 
+                COSMOS_path='/mnt/WD6TB/tianaoli/'):
+        """Construction function for the PyTorch Galaxy Dataset.
+
+        Args:
+            survey (str): The telescope to simulate, 'LSST' or 'JWST'.
+            I (float): A keyword argument that can be used to specify the sample to use, "23.5" or "25.2".
+            fov_pixels (int): Width of the simulated images in pixels.
+            gal_max_shear (float): Maximum shear applied to galaxies.
+            train (bool): Whether the dataset is generated for training or testing.
+            train_split (float, optional): Proportion of data used in train dataset, the rest will be used in test dataset. Defaults to 0.7.
+            data_path (str, optional): Directory to save the galaxy. Defaults to '/mnt/WD6TB/tianaoli/dataset/'.
+            COSMOS_path (str, optional): Path to COSMOS data. Defaults to '/mnt/WD6TB/tianaoli/'.
+        """
+        
         logging.info('Constructing JWST dataset.')
+        
         # Initialize parameters
         self.train= train # Using train data or test data
         self.COSMOS_dir = os.path.join(COSMOS_path, f"COSMOS_{I}_training_sample")
@@ -262,6 +333,7 @@ class JWST_Dataset():
         self.sequence = []
         self.info = {}
 
+        self.survey = survey # LSST or JWST
         self.I = I # I = 23.5 or 25.2 COSMOS data
         self.fov_pixels = fov_pixels # numbers of pixels in FOV
         self.gal_max_shear = gal_max_shear
@@ -301,56 +373,41 @@ class JWST_Dataset():
             self.sequence = self.info['sequence']
         except:
             self.info = {'fov_pixels':fov_pixels, 'gal_max_shear':gal_max_shear}
-            # Generate random sequence for data
             logging.warning(f'Failed reading information from {self.info_file}.')
-            self.sequence = [i for i in range(self.n_total)]
-            np.random.shuffle(self.sequence)
-            n_train = int(self.train_split * self.n_total)
-            self.info['n_total'] = self.n_total
-            self.info['n_train'] = n_train
-            self.info['n_test'] = self.real_galaxy_catalog.nobjects - n_train
-            self.info['sequence'] = self.sequence
-            with open(self.info_file, 'w') as f:
-                json.dump(self.info, f)
-            logging.info(f'Successfully created {self.info_file}.')
-            self.create_images()
+            
 
     def create_images(self):
         """Generate and save JWST images with Galsim and WebbPSF."""
+        
         logging.info('Simulating JWST images.')
-        random_seed = 42579
+        
+        # Generate random sequence for data
+        self.sequence = [i for i in range(self.n_total)]
+        np.random.shuffle(self.sequence)
+        n_train = int(self.train_split * self.n_total)
+        self.info['n_total'] = self.n_total
+        self.info['n_train'] = n_train
+        self.info['n_test'] = self.real_galaxy_catalog.nobjects - n_train
+        self.info['sequence'] = self.sequence
+        with open(self.info_file, 'w') as f:
+            json.dump(self.info, f)
+        logging.info(f'Successfully created {self.info_file}.')
+        
+        random_seed = 243
         psnr_list = []
         
-        psfs = dict() # all PSF images
-        insts = ['NIRCam', 'NIRSpec','NIRISS', 'MIRI', 'FGS']
-        for instname in insts:
-            inst = webbpsf.instrument(instname)
-            filters = inst.filter_list
-            for filter in filters:
-                inst.filter = filter
-                try:
-                    logging.info(f'Calculating PSF: {instname} {filter}')
-                    psf_list = inst.calc_psf(fov_pixels=self.fov_pixels, oversample=1)
-                    psf = torch.from_numpy(psf_list[0].data)
-                    psf = torch.max(torch.zeros_like(psf), psf) # set negative pixels to zero
-                    psf /= psf.sum()
-                    psfs[instname+filter] = (psf, inst.pixelscale)
-                except:
-                    pass
-        psf_names = list(psfs.keys())
+        # Calculate all PSFs and split for train/test
+        psf_names, psfs = get_Webb_PSF()
         np.random.shuffle(psf_names)
         train_psfs = psf_names[:int(len(psf_names) * self.train_split)]
         test_psfs = psf_names[int(len(psf_names) * self.train_split):]
+        
         for k in range(self.n_total):
             idx = self.sequence[k] # index pf galaxy in the catalog
             
-            # Choose a PSF 
-            if k < self.n_train:
-                psf_name = np.random.choice(train_psfs)
-            else:
-                psf_name = np.random.choice(test_psfs)
+            # Choose a Webb PSF 
+            psf_name = np.random.choice(train_psfs) if k < self.n_train else np.random.choice(test_psfs)
             psf_image, pixel_scale = psfs[psf_name]
-            
             
             # Galaxy parameters 
             rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
@@ -363,28 +420,13 @@ class JWST_Dataset():
             gal_mu = 1 + rng() * 0.1            # mu = ((1-kappa)^2 - g1^2 - g2^2)^-1 (1.082)
             theta = 2. * np.pi * rng()          # radians
             
-            # Read out real galaxy from catalog
-            gal_ori = galsim.RealGalaxy(self.real_galaxy_catalog, index = idx, flux = gal_flux)
-            psf_ori = self.real_galaxy_catalog.getPSF(i=idx)
-            gal_ori_image = self.real_galaxy_catalog.getGalImage(idx)
-            psf_ori_image = self.real_galaxy_catalog.getPSFImage(idx)
+            gal_image, gal_orig = get_COSMOS_Galaxy(catlog=self.real_galaxy_catalog, idx=idx, 
+                                                    gal_flux=gal_flux, sky_level=sky_level, 
+                                                    gal_e=gal_e, gal_beta=gal_beta, 
+                                                    theta=theta, gal_mu=gal_mu, 
+                                                    fov_pixels=self.fov_pixels, pixel_scale=pixel_scale, 
+                                                    rng=rng)
 
-            gal_ori = galsim.Convolve([psf_ori, gal_ori]) # concolve wth original PSF of HST
-            gal = gal_ori.rotate(theta * galsim.radians) # Rotate by a random angle
-            gal = gal.shear(e=gal_e, beta=gal_beta * galsim.radians) # Apply the desired shear
-            gal = gal.magnify(gal_mu) # Also apply a magnification mu = ( (1-kappa)^2 - |gamma|^2 )^-1, this conserves surface brightness, so it scales both the area and flux.
-            
-            # Offset by up to 1/2 pixel in each direction
-            dx = rng() - 0.5
-            dy = rng() - 0.5
-            
-            gal_image = galsim.ImageF(self.fov_pixels, self.fov_pixels)
-            gal.drawImage(gal_image, scale=pixel_scale, offset=(dx,dy), method='auto')
-            gal_image += sky_level * (pixel_scale**2)
-            gal_image = torch.from_numpy(gal_image.array)
-            gal_image = torch.max(torch.zeros_like(gal_image), gal_image)
-            
-            
             # Convolution via FFT
             conv = ifftshift(ifft2(fft2(psf_image) * fft2(gal_image))).real
             conv = torch.max(torch.zeros_like(conv), conv) # set negative pixels to zero
@@ -396,9 +438,6 @@ class JWST_Dataset():
             # Save images
             psnr = PSNR(obs, gal_image)
             psnr_list.append(psnr)
-            # io.imsave(os.path.join(self.data_path, 'gt', f"gt_{self.I}_{k}.tiff"), np.array(gal_image), check_contrast=False)
-            # io.imsave(os.path.join(self.data_path, 'psf', f"psf_{self.I}_{k}.tiff"), np.array(psf_image), check_contrast=False)
-            # io.imsave(os.path.join(self.data_path, 'obs', f"obs_{self.I}_{k}.tiff"), np.array(obs), check_contrast=False)
             torch.save(gal_image.clone(), os.path.join(self.data_path, 'gt', f"gt_{self.I}_{k}.pth"))
             torch.save(psf_image.clone(), os.path.join(self.data_path, 'psf', f"psf_{self.I}_{k}.pth"))
             torch.save(obs.clone(), os.path.join(self.data_path, 'obs', f"obs_{self.I}_{k}.pth"))
@@ -408,7 +447,7 @@ class JWST_Dataset():
             if idx < 200:
                 plt.figure(figsize=(10,10))
                 plt.subplot(2,2,1)
-                plt.imshow(gal_ori_image.array)
+                plt.imshow(gal_orig)
                 plt.title('Original Galaxy')
                 plt.subplot(2,2,2)
                 plt.imshow(gal_image)
@@ -434,19 +473,12 @@ class JWST_Dataset():
         
         psf_path = os.path.join(self.data_path, 'psf')
         psf = torch.load(os.path.join(psf_path, f"psf_{self.I}_{idx}.pth")).unsqueeze(0)
-        # psf = torch.from_numpy(io.imread(os.path.join(psf_path, f"psf_{self.I}_{idx}.tiff"))).unsqueeze(0)
-        # psf = (psf - psf.min())/(psf.max() - psf.min())
-        # psf /= psf.sum()
 
         obs_path = os.path.join(self.data_path, 'obs')
         obs = torch.load(os.path.join(obs_path, f"obs_{self.I}_{idx}.pth")).unsqueeze(0)
-        # obs = torch.from_numpy(io.imread(os.path.join(obs_path, f"obs_{self.I}_{idx}.tiff"))).unsqueeze(0)
-        # obs = (obs - obs.min())/(obs.max() - obs.min())
 
         gt_path = os.path.join(self.data_path, 'gt')
         gt = torch.load(os.path.join(gt_path, f"gt_{self.I}_{idx}.pth")).unsqueeze(0)
-        # gt = torch.from_numpy(io.imread(os.path.join(gt_path, f"gt_{self.I}_{idx}.tiff"))).unsqueeze(0)
-        # gt = (gt - gt.min())/(gt.max() - gt.min())
 
         M = obs.ravel().mean().float()
         M = torch.Tensor(M).view(1,1,1)
@@ -455,12 +487,24 @@ class JWST_Dataset():
             
             
 
-def get_dataloader(survey='JWST', I=23.5, train_test_split=0.857, batch_size=32):
-    """Create dataloaders from Galaxy Dataset."""
+def get_dataloader(survey='LSST', I=23.5, train_test_split=0.857, batch_size=32):
+    """Generate dataloaders from Galaxy Dataset.
+
+    Args:
+        survey (str, optional): The survey of the dataset. Defaults to 'LSST'.
+        I (float, optional): _description_. Defaults to 23.5.
+        train_test_split (float, optional): Proportion of data used in train dataloader in train dataset, the rest will be used in valid dataloader. Defaults to 0.857.
+        batch_size (int, optional): Batch size for training dataset. Defaults to 32.
+
+    Returns:
+        train_loader:  PyTorch data loader for train dataset.
+        val_loader: PyTorch data loader for valid dataset.
+    """
     if survey == 'LSST':
         train_dataset = Galaxy_Dataset(train=True, I=I, data_path='/mnt/WD6TB/tianaoli/dataset/')
     elif survey == 'JWST':
         train_dataset = JWST_Dataset(train=True, I=I, fov_pixels=64)
+    
     train_size = int(train_test_split * len(train_dataset))
     val_size = len(train_dataset) - train_size
     train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])
