@@ -503,7 +503,7 @@ class Galaxy_Dataset(Dataset):
                 plt.title('Original Galaxy')
                 plt.subplot(2,2,2)
                 plt.imshow(gal_image)
-                plt.title('Simulated Galaxy\n($e_1={:.3f}$, $e_2={:.3f}$)'.format(gal_shear.g1, gal_shear.g2))
+                plt.title('Simulated Galaxy\n($g_1={:.3f}$, $g_2={:.3f}$)'.format(gal_shear.g1, gal_shear.g2))
                 plt.subplot(2,2,3)
                 plt.imshow(psf_image)
                 plt.title('PSF\n($g_1={:.3f}$, $g_2={:.3f}$, FWHM={:.2f})'.format(atmos_shear.g1, atmos_shear.g2, atmos_fwhm) if self.survey=='LSST' else f'PSF: {psf_name}')
