@@ -448,7 +448,7 @@ class Galaxy_Dataset(Dataset):
                     atmos_fwhm = rng_gaussian()
                 atmos_e = rng() * self.atmos_max_shear # ellipticity of atmospheric PSF
                 atmos_beta = 2. * np.pi * rng()     # radians
-                atmos_shear = galsim.Shear(e=atmos_e, beta=atmos_beta)
+                atmos_shear = galsim.Shear(e=atmos_e, beta=atmos_beta * galsim.radians)
                 opt_defocus = 0.3 + 0.4 * rng()     # wavelengths
                 opt_a1 = 2*0.5*(rng() - 0.5)        # wavelengths (-0.29)
                 opt_a2 = 2*0.5*(rng() - 0.5)        # wavelengths (0.12)
