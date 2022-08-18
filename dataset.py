@@ -448,6 +448,7 @@ class Galaxy_Dataset(Dataset):
                     atmos_fwhm = rng_gaussian()
                 atmos_e = rng() * self.atmos_max_shear # ellipticity of atmospheric PSF
                 atmos_beta = 2. * np.pi * rng()     # radians
+                atmos_shear = galsim.Shear(e=atmos_e, beta=atmos_beta)
                 opt_defocus = 0.3 + 0.4 * rng()     # wavelengths
                 opt_a1 = 2*0.5*(rng() - 0.5)        # wavelengths (-0.29)
                 opt_a2 = 2*0.5*(rng() - 0.5)        # wavelengths (0.12)
@@ -505,7 +506,7 @@ class Galaxy_Dataset(Dataset):
                 plt.title('Simulated Galaxy\n($e_1={:.3f}$, $e_2={:.3f}$)'.format(gal_shear.g1, gal_shear.g2))
                 plt.subplot(2,2,3)
                 plt.imshow(psf_image)
-                plt.title(f'PSF: {psf_name}')
+                plt.title('PSF\n($g_1={:.3f}$, $g_2={:.3f}$, FWHM={:.2f})'.format(atmos_shear.g1, atmos_shear.g2, atmos_fwhm) if self.survey=='LSST' else f'PSF: {psf_name}')
                 plt.subplot(2,2,4)
                 plt.imshow(obs)
                 plt.title('Observed Galaxy\n($PSNR={:.2f}$)'.format(psnr))
