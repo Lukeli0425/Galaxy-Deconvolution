@@ -495,7 +495,7 @@ class Galaxy_Dataset(Dataset):
             logging.info("Simulating Image:  [{:}/{:}]   PSNR={:.2f}".format(k+1, self.n_total, psnr))
 
             # Visualization
-            if idx < 200:
+            if k < 200:
                 plt.figure(figsize=(10,10))
                 plt.subplot(2,2,1)
                 plt.imshow(gal_orig)
