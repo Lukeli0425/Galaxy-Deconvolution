@@ -18,7 +18,7 @@ from utils import PSNR
 class Galaxy_Dataset(Dataset):
     """A galaxy image dataset generated with Galsim."""
     def __init__(self,  train=True, data_path='/mnt/WD6TB/tianaoli/dataset/', train_split = 0.7, n_total=0,
-                        COSMOS_path='/mnt/WD6TB/tianaoli/', atmos=True, I=23.5, img_size=(48,48),
+                        COSMOS_path='/mnt/WD6TB/tianaoli/', I=23.5, fov_pixels=48,
                         gal_max_shear=0.5, atmos_max_shear=0.2, 
                         pixel_scale=0.2, seeing=0.7):
         logging.info('Constructing dataset.')
@@ -32,9 +32,8 @@ class Galaxy_Dataset(Dataset):
         self.sequence = []
         self.info = {}
 
-        self.atmos = atmos # ground-based or space-based
         self.I = I # I = 23.5 or 25.2 COSMOS data
-        self.img_size = img_size
+        self.fov_pixels = fov_pixels
         self.gal_max_shear = gal_max_shear
         self.atmos_max_shear = atmos_max_shear
         self.pixel_scale = pixel_scale # arcsec
@@ -74,8 +73,7 @@ class Galaxy_Dataset(Dataset):
             self.n_test = self.info['n_test']
             self.sequence = self.info['sequence']
         except:
-            self.info = {'atmos':atmos, 'I':I, 'img_size':img_size, 'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'pixel_scale':pixel_scale, 'seeing':seeing}
-            # Generate random sequence for data
+            self.info = {'I':I, 'fov_pixels':fov_pixels, 'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'pixel_scale':pixel_scale, 'seeing':seeing}
             logging.warning(f'Failed reading information from {self.info_file}.')
             
 
@@ -108,18 +106,17 @@ class Galaxy_Dataset(Dataset):
             gal_g2 = gal_e * np.sin(gal_beta)
             gal_mu = 1 + rng() * 0.1            # mu = ((1-kappa)^2 - g1^2 - g2^2)^-1 (1.082)
             theta = 2. * np.pi * rng()          # radians
+            
             # PSF parameters
-            psf_flux = 1.e5
-            if self.atmos:
-                rng_gaussian = galsim.GaussianDeviate(seed=random_seed+k+1, mean=self.seeing, sigma=0.18)
-                atmos_fwhm = 0 # arcsec (mean 0.7 for LSST)
-                while atmos_fwhm < 0.35 or atmos_fwhm > 1.1: # sample fwhm
-                    atmos_fwhm = rng_gaussian()
-                # atmos_fwhm = self.seeing + (rng()-0.5)*0.25 # sample uniformly in [0.45, 0.95]
-                atmos_e = rng() * self.atmos_max_shear # ellipticity of atmospheric PSF
-                atmos_beta = 2. * np.pi * rng()     # radians
-                atmos_g1 = atmos_e * np.cos(atmos_beta)
-                atmos_g2 = atmos_e * np.sin(atmos_beta)
+            rng_gaussian = galsim.GaussianDeviate(seed=random_seed+k+1, mean=self.seeing, sigma=0.18)
+            atmos_fwhm = 0 # arcsec (mean 0.7 for LSST)
+            while atmos_fwhm < 0.35 or atmos_fwhm > 1.1: # sample fwhm
+                atmos_fwhm = rng_gaussian()
+            # atmos_fwhm = self.seeing + (rng()-0.5)*0.25 # sample uniformly in [0.45, 0.95]
+            atmos_e = rng() * self.atmos_max_shear # ellipticity of atmospheric PSF
+            atmos_beta = 2. * np.pi * rng()     # radians
+            atmos_g1 = atmos_e * np.cos(atmos_beta)
+            atmos_g2 = atmos_e * np.sin(atmos_beta)
             opt_defocus = 0.3 + 0.4 * rng()     # wavelengths
             opt_a1 = 2*0.5*(rng() - 0.5)        # wavelengths (-0.29)
             opt_a2 = 2*0.5*(rng() - 0.5)        # wavelengths (0.12)
@@ -127,55 +124,25 @@ class Galaxy_Dataset(Dataset):
             opt_c2 = 2*1.*(rng() - 0.5)         # wavelengths (-0.33)
             opt_obscuration = 0.165             # linear scale size of secondary mirror obscuration $(3.4/8.36)^2$
             lam = 700                           # nm    NB: don't use lambda - that's a reserved word.
-            tel_diam = 8.36 if self.atmos else 6.5# telescope diameter / meters (8.36 for LSST, 6.5 for JWST)
-            # psf_beta = 3
-            # psf_trunc= 2 * atmos_fwhm
-            # CCD parameters
-            read_noise = 9. # e-
-            gain = 0.34 # e-/ADU
+            tel_diam = 8.36 # telescope diameter / meters (8.36 for LSST, 6.5 for JWST)
 
-            # Read out real galaxy from catalog
-            gal_ori = galsim.RealGalaxy(self.real_galaxy_catalog, index = idx, flux = gal_flux)
-            psf_ori = self.real_galaxy_catalog.getPSF(i=idx)
-            gal_ori_image = self.real_galaxy_catalog.getGalImage(idx)
-            psf_ori_image = self.real_galaxy_catalog.getPSFImage(idx)
-
-            gal_ori = galsim.Convolve([psf_ori, gal_ori]) # concolve wth original PSF of HST
-            gal = gal_ori.rotate(theta * galsim.radians) # Rotate by a random angle
-            gal = gal.shear(e=gal_e, beta=gal_beta * galsim.radians) # Apply the desired shear
-            gal = gal.magnify(gal_mu) # Also apply a magnification mu = ( (1-kappa)^2 - |gamma|^2 )^-1, this conserves surface brightness, so it scales both the area and flux.
             
-            # Simulated PSF (optical + atmospheric)
-            # Define the optical component of PSF
-            lam_over_diam = lam * 1.e-9 / tel_diam # radians
-            lam_over_diam *= 206265  # arcsec
-            optics = galsim.OpticalPSF( lam_over_diam = lam_over_diam,
-                                        defocus = opt_defocus,
-                                        coma1 = opt_c1, coma2 = opt_c2,
-                                        astig1 = opt_a1, astig2 = opt_a2,
-                                        obscuration = opt_obscuration,
-                                        flux=1)
-            # Define the atmospheric component of PSF
-            atmos = galsim.Kolmogorov(fwhm=atmos_fwhm, flux=1) # Note: the flux here is the default flux=1.
-            atmos = atmos.shear(e=atmos_e, beta=atmos_beta*galsim.radians)
-            psf = galsim.Convolve([atmos, optics], real_space=True)
+            gal_image, gal_orig = get_COSMOS_Galaxy(catlog=self.real_galaxy_catalog, idx=idx, 
+                                                    gal_flux=gal_flux, sky_level=sky_level, 
+                                                    gal_e=gal_e, gal_beta=gal_beta, 
+                                                    theta=theta, gal_mu=gal_mu, 
+                                                    fov_pixels=self.fov_pixels, pixel_scale=self.pixel_scale, 
+                                                    rng=rng)
             
-            psf_image = galsim.ImageF(self.img_size[0], self.img_size[1])
-            psf.drawImage(psf_image, scale=self.pixel_scale, method='auto')
-            psf_image = torch.from_numpy(psf_image.array)
-            psf_image = torch.max(torch.zeros_like(psf_image), psf_image)
+            
+            psf_image = get_atmos_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
+                                      atmos_fwhm, atmos_e, atmos_beta,
+                                      self.fov_pixels, self.pixel_scale)
+            
             # final = galsim.Convolve([psf, gal]) # Make the combined profile
             # Offset by up to 1/2 pixel in each direction
             dx = rng() - 0.5
             dy = rng() - 0.5
-
-            # Dobs the profile
-            gal_image = galsim.ImageF(self.img_size[0], self.img_size[1])
-            gal.drawImage(gal_image, scale=self.pixel_scale, offset=(dx,dy), method='auto')
-            gal_image += sky_level * (self.pixel_scale**2)
-            gal_image = torch.from_numpy(gal_image.array)
-            gal_image = torch.max(torch.zeros_like(gal_image), gal_image)
-            
             
             # Concolve with PSF
             conv = ifftshift(ifft2(fft2(psf_image) * fft2(gal_image))).real
@@ -185,13 +152,6 @@ class Galaxy_Dataset(Dataset):
             obs = torch.poisson(conv) + torch.normal(mean=torch.zeros_like(conv), std=torch.ones_like(conv))
             obs = torch.max(torch.zeros_like(obs), obs) # set negative pixels to zero
             
-            # gal_image.addNoise(galsim.PoissonNoise(rng)) # no noise for ground truth
-            # obs += sky_level * (self.pixel_scale**2) # Add a constant background level
-            # obs.addNoise(galsim.CCDNoise(rng, gain=gain, read_noise=read_noise)) # add noise for observation
-            # obs.addNoise(galsim.PoissonNoise(rng))
-            # psf_image = psf_image*psf_flux + sky_level * (self.pixel_scale**2) # Add a constant background level
-            # psf_image.addNoise(galsim.CCDNoise(rng, gain=gain, read_noise=read_noise)) # add noise for observation
-            # psf_image.addNoise(galsim.PoissonNoise(rng))
 
             # Save images
             psnr = PSNR(obs, gal_image)
@@ -205,14 +165,14 @@ class Galaxy_Dataset(Dataset):
             if idx < 200:
                 plt.figure(figsize=(10,10))
                 plt.subplot(2,2,1)
-                plt.imshow(gal_ori_image.array)
+                plt.imshow(gal_orig)
                 plt.title('Original Galaxy')
                 plt.subplot(2,2,2)
                 plt.imshow(gal_image)
                 plt.title('Simulated Galaxy\n($e_1={:.3f}$, $e_2={:.3f}$)'.format(gal_g1, gal_g2))
                 plt.subplot(2,2,3)
                 plt.imshow(psf_image)
-                plt.title('PSF\n($e_1={:.3f}$, $e_2={:.3f}$, FWHM={:.2f})'.format(atmos_g1, atmos_g2, atmos_fwhm) if self.atmos else 'PSF')
+                plt.title('PSF\n($e_1={:.3f}$, $e_2={:.3f}$, FWHM={:.2f})'.format(atmos_g1, atmos_g2, atmos_fwhm))
                 plt.subplot(2,2,4)
                 plt.imshow(obs)
                 plt.title('Observed Galaxy\n($PSNR={:.2f}$)'.format(psnr))
@@ -247,11 +207,57 @@ class Galaxy_Dataset(Dataset):
 
         return (obs, psf, M), gt
 
+def get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
+                  atmos_fwhm, atmos_e, atmos_beta,
+                  fov_pixels, pixel_scale):
+    """Simulate a PSF from a ground-based observation.
 
-def get_Webb_PSF(insts=['NIRCam', 'NIRSpec','NIRISS', 'MIRI', 'FGS']):
+    Args:
+        lam (float): Wavelength in nanometers.
+        tel_diam (float): Diameter of the telescope in meters.
+        opt_defocus (float): Defocus in units of incident light wavelength.
+        opt_c1 (float): Coma along y in units of incident light wavelength.
+        opt_c2 (float): Coma along x in units of incident light wavelength.
+        opt_a1 (float): Astigmatism (like e2) in units of incident light wavelength. 
+        opt_a2 (float): Astigmatism (like e1) in units of incident light wavelength. 
+        opt_obscuration (float): Linear dimension of central obscuration as fraction of pupil linear dimension, [0., 1.).
+        atmos_fwhm (float): The full width at half maximum of the Kolmogorov function for atmospheric PSF.
+        atmos_e (float): Ellipticity of the shear to apply to the atmospheric component.
+        atmos_beta (float): Position angle (in radians) of the shear to apply to the atmospheric component, twice the phase of a complex valued shear.
+        fov_pixels (int): Width of the simulated images in pixels.
+        pixel_scale (float): Pixel scale of the simulated image determining the resolution.
+
+    Returns:
+        torch.Tensor: Simulated PSF image with shape (fov_pixels, fov_pixels).
+    """
+    # Simulated PSF (optical + atmospheric)
+    # Define the optical component of PSF
+    lam_over_diam = lam * 1.e-9 / tel_diam # radians
+    lam_over_diam *= 206265  # arcsec
+    optics = galsim.OpticalPSF( lam_over_diam = lam_over_diam,
+                                defocus = opt_defocus,
+                                coma1 = opt_c1, coma2 = opt_c2,
+                                astig1 = opt_a1, astig2 = opt_a2,
+                                obscuration = opt_obscuration,
+                                flux=1)
+    
+    # Define the atmospheric component of PSF
+    atmos = galsim.Kolmogorov(fwhm=atmos_fwhm, flux=1) # Note: the flux here is the default flux=1.
+    atmos = atmos.shear(e=atmos_e, beta=atmos_beta*galsim.radians)
+    psf = galsim.Convolve([atmos, optics], real_space=True)
+    
+    psf_image = galsim.ImageF(fov_pixels, fov_pixels)
+    psf.drawImage(psf_image, scale=pixel_scale, method='auto')
+    psf_image = torch.from_numpy(psf_image.array)
+    psf_image = torch.max(torch.zeros_like(psf_image), psf_image)
+            
+    return psf_image
+
+def get_Webb_PSF(fov_pixels, insts=['NIRCam', 'NIRSpec','NIRISS', 'MIRI', 'FGS']):
     """Calculate all PSFs for given JWST instruments.
 
     Args:
+        fov_pixels (int): Width of the simulated images in pixels.
         insts (list, optional): Instruments of JWST for PSF calculation. Defaults to ['NIRCam', 'NIRSpec','NIRISS', 'MIRI', 'FGS'].
 
     Returns:
@@ -265,7 +271,7 @@ def get_Webb_PSF(insts=['NIRCam', 'NIRSpec','NIRISS', 'MIRI', 'FGS']):
             inst.filter = filter
             try:
                 logging.info(f'Calculating Webb PSF: {instname} {filter}')
-                psf_list = inst.calc_psf(fov_pixels=self.fov_pixels, oversample=1)
+                psf_list = inst.calc_psf(fov_pixels=fov_pixels, oversample=1)
                 psf = torch.from_numpy(psf_list[0].data)
                 psf = torch.max(torch.zeros_like(psf), psf) # set negative pixels to zero
                 psf /= psf.sum()
@@ -277,7 +283,25 @@ def get_Webb_PSF(insts=['NIRCam', 'NIRSpec','NIRISS', 'MIRI', 'FGS']):
     return psf_names, psfs
 
 def get_COSMOS_Galaxy(catalog, idx, gal_flux, sky_level, gal_e, gal_beta, theta, gal_mu, fov_pixels, pixel_scale, rng):
+    """Simulate a background galaxy with data from COSMOS real galaxy catalog.
 
+    Args:
+        catalog (galsim.RealGalaxyCatalog): A COSMOS Real Galaxy Catalog object, from which the galaxy are read out.
+        idx (int): Index of the chosen galaxy in the catalog.
+        gal_flux (float): Total flux of the galaxy in the simulated image.
+        sky_level (float): Skylevel in the simulated image.
+        gal_e (float): Ellipticity of the shear to apply.
+        gal_beta (float): Position angle (in radians) of the shear to apply, twice the phase of a complex valued shear.
+        theta (float): Rotation angle of the galaxy (in radians, positive means anticlockwise).
+        gal_mu (float): The lensing magnification to apply.
+        fov_pixels (int): Width of the simulated images in pixels.
+        pixel_scale (float): Pixel scale of the simulated image determining the resolution.
+        rng (galsim.UniformDeviate): A galsim random number generator object for simulation.
+
+    Returns:
+        torch.Tensor, numpy.array: Simulated galaxy image of shape (fov_pixels, fov_pixels) and original galaxy image in COSMOS dataset.
+    """
+    
     # Read out real galaxy from catalog
     gal_ori = galsim.RealGalaxy(catalog, index = idx, flux = gal_flux)
     psf_ori = catalog.getPSF(i=idx)
@@ -306,6 +330,7 @@ class JWST_Dataset(Dataset):
     """Simulated Galaxy Image Dataset inherited from torch.utils.data.Dataset."""
     def __init__(self, survey, I, fov_pixels, gal_max_shear, 
                 train, train_split = 0.7, 
+                pixel_scale=0, atmos_max_shear=0, seeing=0,
                 data_path='/mnt/WD6TB/tianaoli/dataset/', 
                 COSMOS_path='/mnt/WD6TB/tianaoli/'):
         """Construction function for the PyTorch Galaxy Dataset.
@@ -317,11 +342,14 @@ class JWST_Dataset(Dataset):
             gal_max_shear (float): Maximum shear applied to galaxies.
             train (bool): Whether the dataset is generated for training or testing.
             train_split (float, optional): Proportion of data used in train dataset, the rest will be used in test dataset. Defaults to 0.7.
-            data_path (str, optional): Directory to save the galaxy. Defaults to '/mnt/WD6TB/tianaoli/dataset/'.
-            COSMOS_path (str, optional): Path to COSMOS data. Defaults to '/mnt/WD6TB/tianaoli/'.
+            pixel_scale (float, optional): _description_. Defaults to 0.
+            atmos_max_shear (float, optional): Maximum shear applied to atmospheric PSFs. Defaults to 0.
+            seeing (float, optional): Average seeing. Defaults to 0.7.
+            data_path (str, optional): Directory to save the dataset. Defaults to '/mnt/WD6TB/tianaoli/dataset/'.
+            COSMOS_path (str, optional): Path to the COSMOS data. Defaults to '/mnt/WD6TB/tianaoli/'.
         """
         
-        logging.info('Constructing JWST dataset.')
+        logging.info(f'Constructing {survey} Galaxy dataset.')
         
         # Initialize parameters
         self.train= train # Using train data or test data
@@ -372,7 +400,7 @@ class JWST_Dataset(Dataset):
             self.n_test = self.info['n_test']
             self.sequence = self.info['sequence']
         except:
-            self.info = {'fov_pixels':fov_pixels, 'gal_max_shear':gal_max_shear}
+            self.info = {'survey':survey, 'I':I, 'fov_pixels':fov_pixels, 'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'pixel_scale':pixel_scale, 'seeing':seeing}
             logging.warning(f'Failed reading information from {self.info_file}.')
             
 
@@ -396,18 +424,40 @@ class JWST_Dataset(Dataset):
         random_seed = 243
         psnr_list = []
         
-        # Calculate all PSFs and split for train/test
-        psf_names, psfs = get_Webb_PSF()
-        np.random.shuffle(psf_names)
-        train_psfs = psf_names[:int(len(psf_names) * self.train_split)]
-        test_psfs = psf_names[int(len(psf_names) * self.train_split):]
+        # Calculate all Webb PSFs and split for train/test
+        if self.survey == 'JWST':
+            psf_names, psfs = get_Webb_PSF()
+            np.random.shuffle(psf_names)
+            train_psfs = psf_names[:int(len(psf_names) * self.train_split)]
+            test_psfs = psf_names[int(len(psf_names) * self.train_split):]
         
         for k in range(self.n_total):
             idx = self.sequence[k] # index pf galaxy in the catalog
             
-            # Choose a Webb PSF 
-            psf_name = np.random.choice(train_psfs) if k < self.n_train else np.random.choice(test_psfs)
-            psf_image, pixel_scale = psfs[psf_name]
+            if self.survey == 'JWST': # Choose a Webb PSF 
+                psf_name = np.random.choice(train_psfs) if k < self.n_train else np.random.choice(test_psfs)
+                psf_image, pixel_scale = psfs[psf_name]
+            elif self.survey == 'LSST': # Simulate a LSST PSF 
+                # PSF parameters
+                rng_gaussian = galsim.GaussianDeviate(seed=random_seed+k+1, mean=self.seeing, sigma=0.18)
+                atmos_fwhm = 0 # arcsec (mean 0.7 for LSST)
+                while atmos_fwhm < 0.35 or atmos_fwhm > 1.1: # sample fwhm
+                    atmos_fwhm = rng_gaussian()
+                atmos_e = rng() * self.atmos_max_shear # ellipticity of atmospheric PSF
+                atmos_beta = 2. * np.pi * rng()     # radians
+                opt_defocus = 0.3 + 0.4 * rng()     # wavelengths
+                opt_a1 = 2*0.5*(rng() - 0.5)        # wavelengths (-0.29)
+                opt_a2 = 2*0.5*(rng() - 0.5)        # wavelengths (0.12)
+                opt_c1 = 2*1.*(rng() - 0.5)         # wavelengths (0.64)
+                opt_c2 = 2*1.*(rng() - 0.5)         # wavelengths (-0.33)
+                opt_obscuration = 0.165             # linear scale size of secondary mirror obscuration $(3.4/8.36)^2$
+                lam = 700                           # nm    NB: don't use lambda - that's a reserved word.
+                tel_diam = 8.36 # telescope diameter / meters (8.36 for LSST, 6.5 for JWST)
+                
+                psf_image = get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
+                                        atmos_fwhm, atmos_e, atmos_beta,
+                                        self.fov_pixels, pixel_scale=pixel_scale)
+                pixel_scale = self.pixel_scale
             
             # Galaxy parameters 
             rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
@@ -415,10 +465,10 @@ class JWST_Dataset(Dataset):
             gal_flux = 1.e5                     # arbitrary choice, makes nice (not too) noisy images
             gal_e = rng() * self.gal_max_shear  # shear of galaxy
             gal_beta = 2. * np.pi * rng()       # radians
-            gal_g1 = gal_e * np.cos(gal_beta)
-            gal_g2 = gal_e * np.sin(gal_beta)
+            gal_shear = galsim.Shear(e=gal_e, beta=gal_beta*galsim.radians)
             gal_mu = 1 + rng() * 0.1            # mu = ((1-kappa)^2 - g1^2 - g2^2)^-1 (1.082)
             theta = 2. * np.pi * rng()          # radians
+            
             
             gal_image, gal_orig = get_COSMOS_Galaxy(catlog=self.real_galaxy_catalog, idx=idx, 
                                                     gal_flux=gal_flux, sky_level=sky_level, 
@@ -451,7 +501,7 @@ class JWST_Dataset(Dataset):
                 plt.title('Original Galaxy')
                 plt.subplot(2,2,2)
                 plt.imshow(gal_image)
-                plt.title('Simulated Galaxy\n($e_1={:.3f}$, $e_2={:.3f}$)'.format(gal_g1, gal_g2))
+                plt.title('Simulated Galaxy\n($e_1={:.3f}$, $e_2={:.3f}$)'.format(gal_shear.g1, gal_shear.g2))
                 plt.subplot(2,2,3)
                 plt.imshow(psf_image)
                 plt.title(f'PSF: {psf_name}')
@@ -521,9 +571,11 @@ if __name__ == "__main__":
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
-    if opt.survey == 'LSST':
-        LSST_Dataset = Galaxy_Dataset(atmos=True, I=opt.I, pixel_scale=0.2)
-        LSST_Dataset.create_images()
-    elif opt.survey == 'JWST':
-        JWST_Dataset = JWST_Dataset(I=opt.I, fov_pixels=64)
-        JWST_Dataset.create_images()
+    
+    # Dataset = Galaxy_Dataset(survey=opt.survey, I=opt.I, pixel_scale=0.2)
+    # Dataset.create_images()
+    
+    
+    gal_e = 0.5  # shear of galaxy
+    gal_beta = 0.25 * np.pi       # radians
+    shear = galsim.Shear(e=gal_e, beta=gal_beta*galsim.radians)
