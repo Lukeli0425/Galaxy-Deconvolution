@@ -455,11 +455,11 @@ class Galaxy_Dataset(Dataset):
                 opt_obscuration = 0.165             # linear scale size of secondary mirror obscuration $(3.4/8.36)^2$
                 lam = 700                           # nm    NB: don't use lambda - that's a reserved word.
                 tel_diam = 8.36 # telescope diameter / meters (8.36 for LSST, 6.5 for JWST)
+                pixel_scale = self.pixel_scale
                 
                 psf_image = get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
                                         atmos_fwhm, atmos_e, atmos_beta,
-                                        self.fov_pixels, pixel_scale=pixel_scale)
-                pixel_scale = self.pixel_scale
+                                        self.fov_pixels, pixel_scale=pixel_scale)   
             
             # Galaxy parameters 
             sky_level = 2.5e4                   # ADU / arcsec^2
