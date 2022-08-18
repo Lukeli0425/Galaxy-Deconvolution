@@ -434,6 +434,7 @@ class Galaxy_Dataset(Dataset):
         
         for k in range(self.n_total):
             idx = self.sequence[k] # index pf galaxy in the catalog
+            rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
             
             if self.survey == 'JWST': # Choose a Webb PSF 
                 psf_name = np.random.choice(train_psfs) if k < self.n_train else np.random.choice(test_psfs)
@@ -461,7 +462,6 @@ class Galaxy_Dataset(Dataset):
                 pixel_scale = self.pixel_scale
             
             # Galaxy parameters 
-            rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
             sky_level = 2.5e4                   # ADU / arcsec^2
             gal_flux = 1.e5                     # arbitrary choice, makes nice (not too) noisy images
             gal_e = rng() * self.gal_max_shear  # shear of galaxy
