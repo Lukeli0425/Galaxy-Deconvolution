@@ -363,7 +363,7 @@ class Galaxy_Dataset(Dataset):
         self.survey = survey                # 'LSST' or 'JWST'
         self.I = I                          # I = 23.5 or 25.2 COSMOS data
         self.fov_pixels = 48 if self.survey=='LSST' else 64    # numbers of pixels in FOV
-        self.pixel_scale = pixel_scale
+        self.pixel_scale = pixel_scale      # only used for LSST
         self.gal_max_shear = gal_max_shear
         self.atmos_max_shear = atmos_max_shear
         self.seeing = seeing
@@ -459,8 +459,8 @@ class Galaxy_Dataset(Dataset):
                 pixel_scale = self.pixel_scale
                 
                 psf_image = get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
-                                        atmos_fwhm, atmos_e, atmos_beta,
-                                        self.fov_pixels, pixel_scale=pixel_scale)   
+                                         atmos_fwhm, atmos_e, atmos_beta,
+                                         self.fov_pixels, pixel_scale=pixel_scale)   
             
             # Galaxy parameters 
             sky_level = 2.5e4                   # ADU / arcsec^2
@@ -471,7 +471,7 @@ class Galaxy_Dataset(Dataset):
             gal_mu = 1 + rng() * 0.1            # mu = ((1-kappa)^2 - g1^2 - g2^2)^-1 (1.082)
             theta = 2. * np.pi * rng()          # radians
             
-            gal_image, gal_orig = get_COSMOS_Galaxy(catlog=self.real_galaxy_catalog, idx=idx, 
+            gal_image, gal_orig = get_COSMOS_Galaxy(catalog=self.real_galaxy_catalog, idx=idx, 
                                                     gal_flux=gal_flux, sky_level=sky_level, 
                                                     gal_e=gal_e, gal_beta=gal_beta, 
                                                     theta=theta, gal_mu=gal_mu, 
