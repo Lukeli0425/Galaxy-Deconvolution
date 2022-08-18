@@ -363,6 +363,7 @@ class Galaxy_Dataset(Dataset):
         self.survey = survey                # 'LSST' or 'JWST'
         self.I = I                          # I = 23.5 or 25.2 COSMOS data
         self.fov_pixels = 48 if self.survey=='LSST' else 64    # numbers of pixels in FOV
+        self.pixel_scale = pixel_scale
         self.gal_max_shear = gal_max_shear
         self.atmos_max_shear = atmos_max_shear
         self.seeing = seeing
