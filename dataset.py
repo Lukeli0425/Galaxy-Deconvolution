@@ -387,7 +387,7 @@ class JWST_Dataset(Dataset):
             self.n_total = self.real_galaxy_catalog.nobjects
             logging.info(f'Successfully read in {self.n_total} real galaxies from {self.COSMOS_dir}.')
         except:
-            logging.critical(f'Failed reading in real galaxies from {self.COSMOS_dir}.')
+            logging.warning(f'Failed reading in real galaxies from {self.COSMOS_dir}.')
 
         # Read in information file
         self.info_file = os.path.join(self.data_path, f'info_{self.I}.json')
@@ -401,7 +401,7 @@ class JWST_Dataset(Dataset):
             self.sequence = self.info['sequence']
         except:
             self.info = {'survey':survey, 'I':I, 'fov_pixels':fov_pixels, 'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'pixel_scale':pixel_scale, 'seeing':seeing}
-            logging.warning(f'Failed reading information from {self.info_file}.')
+            logging.critical(f'Failed reading information from {self.info_file}.')
             
 
     def create_images(self):
@@ -468,7 +468,6 @@ class JWST_Dataset(Dataset):
             gal_shear = galsim.Shear(e=gal_e, beta=gal_beta*galsim.radians)
             gal_mu = 1 + rng() * 0.1            # mu = ((1-kappa)^2 - g1^2 - g2^2)^-1 (1.082)
             theta = 2. * np.pi * rng()          # radians
-            
             
             gal_image, gal_orig = get_COSMOS_Galaxy(catlog=self.real_galaxy_catalog, idx=idx, 
                                                     gal_flux=gal_flux, sky_level=sky_level, 
