@@ -15,197 +15,197 @@ from utils import PSNR
 
 # webbpsf.setup_logging('ERROR')
 
-class Galaxy_Dataset(Dataset):
-    """A galaxy image dataset generated with Galsim."""
-    def __init__(self,  train=True, data_path='/mnt/WD6TB/tianaoli/dataset/', train_split = 0.7, n_total=0,
-                        COSMOS_path='/mnt/WD6TB/tianaoli/', I=23.5, fov_pixels=48,
-                        gal_max_shear=0.5, atmos_max_shear=0.2, 
-                        pixel_scale=0.2, seeing=0.7):
-        logging.info('Constructing dataset.')
-        # Initialize parameters
-        self.train= train # Using train data or test data
-        self.COSMOS_dir = os.path.join(COSMOS_path, f"COSMOS_{I}_training_sample")
-        self.train_split = train_split # n_train/n_total
-        self.n_total = 0
-        self.n_train = 0
-        self.n_test = 0
-        self.sequence = []
-        self.info = {}
+# class Galaxy_Dataset(Dataset):
+#     """A galaxy image dataset generated with Galsim."""
+#     def __init__(self,  train=True, data_path='/mnt/WD6TB/tianaoli/dataset/', train_split = 0.7, n_total=0,
+#                         COSMOS_path='/mnt/WD6TB/tianaoli/', I=23.5, fov_pixels=48,
+#                         gal_max_shear=0.5, atmos_max_shear=0.2, 
+#                         pixel_scale=0.2, seeing=0.7):
+#         logging.info('Constructing dataset.')
+#         # Initialize parameters
+#         self.train= train # Using train data or test data
+#         self.COSMOS_dir = os.path.join(COSMOS_path, f"COSMOS_{I}_training_sample")
+#         self.train_split = train_split # n_train/n_total
+#         self.n_total = 0
+#         self.n_train = 0
+#         self.n_test = 0
+#         self.sequence = []
+#         self.info = {}
 
-        self.I = I # I = 23.5 or 25.2 COSMOS data
-        self.fov_pixels = fov_pixels
-        self.gal_max_shear = gal_max_shear
-        self.atmos_max_shear = atmos_max_shear
-        self.pixel_scale = pixel_scale # arcsec
-        self.seeing = seeing # arcsec (0.7 for LSST)
+#         self.I = I # I = 23.5 or 25.2 COSMOS data
+#         self.fov_pixels = fov_pixels
+#         self.gal_max_shear = gal_max_shear
+#         self.atmos_max_shear = atmos_max_shear
+#         self.pixel_scale = pixel_scale # arcsec
+#         self.seeing = seeing # arcsec (0.7 for LSST)
         
-        # Create directory for the dataset
-        if not os.path.exists(data_path):
-            os.mkdir(data_path)
-        self.data_path = os.path.join(data_path, f'COSMOS_{self.I}_{"ground" if atmos else "space"}')
-        if not os.path.exists(self.data_path):
-            os.mkdir(self.data_path)
-        if not os.path.exists(os.path.join(self.data_path, 'obs')): # create directory for obs images
-            os.mkdir(os.path.join(self.data_path, 'obs'))
-        if not os.path.exists(os.path.join(self.data_path, 'gt')): # create directory for ground truth
-            os.mkdir(os.path.join(self.data_path, 'gt'))
-        if not os.path.exists(os.path.join(self.data_path, 'psf')): # create directory for PSF
-            os.mkdir(os.path.join(self.data_path, 'psf'))
-        if not os.path.exists(os.path.join(self.data_path, 'visualization')): # create directory for visualization
-            os.mkdir(os.path.join(self.data_path, 'visualization'))
+#         # Create directory for the dataset
+#         if not os.path.exists(data_path):
+#             os.mkdir(data_path)
+#         self.data_path = os.path.join(data_path, f'COSMOS_{self.I}_{"ground" if atmos else "space"}')
+#         if not os.path.exists(self.data_path):
+#             os.mkdir(self.data_path)
+#         if not os.path.exists(os.path.join(self.data_path, 'obs')): # create directory for obs images
+#             os.mkdir(os.path.join(self.data_path, 'obs'))
+#         if not os.path.exists(os.path.join(self.data_path, 'gt')): # create directory for ground truth
+#             os.mkdir(os.path.join(self.data_path, 'gt'))
+#         if not os.path.exists(os.path.join(self.data_path, 'psf')): # create directory for PSF
+#             os.mkdir(os.path.join(self.data_path, 'psf'))
+#         if not os.path.exists(os.path.join(self.data_path, 'visualization')): # create directory for visualization
+#             os.mkdir(os.path.join(self.data_path, 'visualization'))
 
-        # Read in real galaxy catalog
-        try:
-            self.real_galaxy_catalog = galsim.RealGalaxyCatalog(dir=self.COSMOS_dir, sample=str(self.I))
-            self.n_total = self.real_galaxy_catalog.nobjects if n_total==0 else n_total
-            logging.info(f'Successfully read in {self.n_total} real galaxies from {self.COSMOS_dir}.')
-        except:
-            logging.critical(f'Failed reading in real galaxies from {self.COSMOS_dir}.')
+#         # Read in real galaxy catalog
+#         try:
+#             self.real_galaxy_catalog = galsim.RealGalaxyCatalog(dir=self.COSMOS_dir, sample=str(self.I))
+#             self.n_total = self.real_galaxy_catalog.nobjects if n_total==0 else n_total
+#             logging.info(f'Successfully read in {self.n_total} real galaxies from {self.COSMOS_dir}.')
+#         except:
+#             logging.critical(f'Failed reading in real galaxies from {self.COSMOS_dir}.')
 
-        # Read in information file
-        self.info_file = os.path.join(self.data_path, f'info_{self.I}.json')
-        try:
-            logging.info(f'Successfully loaded in {self.info_file}.')
-            with open(self.info_file, 'r') as f:
-                self.info = json.load(f)
-            self.n_total = self.info['n_total']
-            self.n_train = self.info['n_train']
-            self.n_test = self.info['n_test']
-            self.sequence = self.info['sequence']
-        except:
-            self.info = {'I':I, 'fov_pixels':fov_pixels, 'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'pixel_scale':pixel_scale, 'seeing':seeing}
-            logging.warning(f'Failed reading information from {self.info_file}.')
+#         # Read in information file
+#         self.info_file = os.path.join(self.data_path, f'info_{self.I}.json')
+#         try:
+#             logging.info(f'Successfully loaded in {self.info_file}.')
+#             with open(self.info_file, 'r') as f:
+#                 self.info = json.load(f)
+#             self.n_total = self.info['n_total']
+#             self.n_train = self.info['n_train']
+#             self.n_test = self.info['n_test']
+#             self.sequence = self.info['sequence']
+#         except:
+#             self.info = {'I':I, 'fov_pixels':fov_pixels, 'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'pixel_scale':pixel_scale, 'seeing':seeing}
+#             logging.warning(f'Failed reading information from {self.info_file}.')
             
 
-    def create_images(self):
-        """Generate and save LSST images with Galsim."""
-        logging.info('Simulating LSST images.')
+#     def create_images(self):
+#         """Generate and save LSST images with Galsim."""
+#         logging.info('Simulating LSST images.')
         
-        self.sequence = [i for i in range(self.n_total)]
-        np.random.shuffle(self.sequence)
-        n_train = int(self.train_split * self.n_total)
-        self.info['n_total'] = self.n_total
-        self.info['n_train'] = n_train
-        self.info['n_test'] = self.real_galaxy_catalog.nobjects - n_train
-        self.info['sequence'] = self.sequence
-        with open(self.info_file, 'w') as f:
-            json.dump(self.info, f)
-        logging.info(f'Successfully created {self.info_file}.')
+#         self.sequence = [i for i in range(self.n_total)]
+#         np.random.shuffle(self.sequence)
+#         n_train = int(self.train_split * self.n_total)
+#         self.info['n_total'] = self.n_total
+#         self.info['n_train'] = n_train
+#         self.info['n_test'] = self.real_galaxy_catalog.nobjects - n_train
+#         self.info['sequence'] = self.sequence
+#         with open(self.info_file, 'w') as f:
+#             json.dump(self.info, f)
+#         logging.info(f'Successfully created {self.info_file}.')
         
-        random_seed = 425879
-        psnr_list = []
-        for k in range(self.n_total):
-            idx = self.sequence[k] # index pf galaxy in the catalog
-            # Galaxy parameters 
-            rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
-            sky_level = 2.5e4                   # ADU / arcsec^2
-            gal_flux = 1.e5                     # arbitrary choice, makes nice (not too) noisy images
-            gal_e = rng() * self.gal_max_shear  # shear of galaxy
-            gal_beta = 2. * np.pi * rng()       # radians
-            gal_g1 = gal_e * np.cos(gal_beta)
-            gal_g2 = gal_e * np.sin(gal_beta)
-            gal_mu = 1 + rng() * 0.1            # mu = ((1-kappa)^2 - g1^2 - g2^2)^-1 (1.082)
-            theta = 2. * np.pi * rng()          # radians
+#         random_seed = 425879
+#         psnr_list = []
+#         for k in range(self.n_total):
+#             idx = self.sequence[k] # index pf galaxy in the catalog
+#             # Galaxy parameters 
+#             rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
+#             sky_level = 2.5e4                   # ADU / arcsec^2
+#             gal_flux = 1.e5                     # arbitrary choice, makes nice (not too) noisy images
+#             gal_e = rng() * self.gal_max_shear  # shear of galaxy
+#             gal_beta = 2. * np.pi * rng()       # radians
+#             gal_g1 = gal_e * np.cos(gal_beta)
+#             gal_g2 = gal_e * np.sin(gal_beta)
+#             gal_mu = 1 + rng() * 0.1            # mu = ((1-kappa)^2 - g1^2 - g2^2)^-1 (1.082)
+#             theta = 2. * np.pi * rng()          # radians
             
-            # PSF parameters
-            rng_gaussian = galsim.GaussianDeviate(seed=random_seed+k+1, mean=self.seeing, sigma=0.18)
-            atmos_fwhm = 0 # arcsec (mean 0.7 for LSST)
-            while atmos_fwhm < 0.35 or atmos_fwhm > 1.1: # sample fwhm
-                atmos_fwhm = rng_gaussian()
-            # atmos_fwhm = self.seeing + (rng()-0.5)*0.25 # sample uniformly in [0.45, 0.95]
-            atmos_e = rng() * self.atmos_max_shear # ellipticity of atmospheric PSF
-            atmos_beta = 2. * np.pi * rng()     # radians
-            atmos_g1 = atmos_e * np.cos(atmos_beta)
-            atmos_g2 = atmos_e * np.sin(atmos_beta)
-            opt_defocus = 0.3 + 0.4 * rng()     # wavelengths
-            opt_a1 = 2*0.5*(rng() - 0.5)        # wavelengths (-0.29)
-            opt_a2 = 2*0.5*(rng() - 0.5)        # wavelengths (0.12)
-            opt_c1 = 2*1.*(rng() - 0.5)         # wavelengths (0.64)
-            opt_c2 = 2*1.*(rng() - 0.5)         # wavelengths (-0.33)
-            opt_obscuration = 0.165             # linear scale size of secondary mirror obscuration $(3.4/8.36)^2$
-            lam = 700                           # nm    NB: don't use lambda - that's a reserved word.
-            tel_diam = 8.36 # telescope diameter / meters (8.36 for LSST, 6.5 for JWST)
+#             # PSF parameters
+#             rng_gaussian = galsim.GaussianDeviate(seed=random_seed+k+1, mean=self.seeing, sigma=0.18)
+#             atmos_fwhm = 0 # arcsec (mean 0.7 for LSST)
+#             while atmos_fwhm < 0.35 or atmos_fwhm > 1.1: # sample fwhm
+#                 atmos_fwhm = rng_gaussian()
+#             # atmos_fwhm = self.seeing + (rng()-0.5)*0.25 # sample uniformly in [0.45, 0.95]
+#             atmos_e = rng() * self.atmos_max_shear # ellipticity of atmospheric PSF
+#             atmos_beta = 2. * np.pi * rng()     # radians
+#             atmos_g1 = atmos_e * np.cos(atmos_beta)
+#             atmos_g2 = atmos_e * np.sin(atmos_beta)
+#             opt_defocus = 0.3 + 0.4 * rng()     # wavelengths
+#             opt_a1 = 2*0.5*(rng() - 0.5)        # wavelengths (-0.29)
+#             opt_a2 = 2*0.5*(rng() - 0.5)        # wavelengths (0.12)
+#             opt_c1 = 2*1.*(rng() - 0.5)         # wavelengths (0.64)
+#             opt_c2 = 2*1.*(rng() - 0.5)         # wavelengths (-0.33)
+#             opt_obscuration = 0.165             # linear scale size of secondary mirror obscuration $(3.4/8.36)^2$
+#             lam = 700                           # nm    NB: don't use lambda - that's a reserved word.
+#             tel_diam = 8.36 # telescope diameter / meters (8.36 for LSST, 6.5 for JWST)
 
             
-            gal_image, gal_orig = get_COSMOS_Galaxy(catlog=self.real_galaxy_catalog, idx=idx, 
-                                                    gal_flux=gal_flux, sky_level=sky_level, 
-                                                    gal_e=gal_e, gal_beta=gal_beta, 
-                                                    theta=theta, gal_mu=gal_mu, 
-                                                    fov_pixels=self.fov_pixels, pixel_scale=self.pixel_scale, 
-                                                    rng=rng)
+#             gal_image, gal_orig = get_COSMOS_Galaxy(catlog=self.real_galaxy_catalog, idx=idx, 
+#                                                     gal_flux=gal_flux, sky_level=sky_level, 
+#                                                     gal_e=gal_e, gal_beta=gal_beta, 
+#                                                     theta=theta, gal_mu=gal_mu, 
+#                                                     fov_pixels=self.fov_pixels, pixel_scale=self.pixel_scale, 
+#                                                     rng=rng)
             
             
-            psf_image = get_atmos_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
-                                      atmos_fwhm, atmos_e, atmos_beta,
-                                      self.fov_pixels, self.pixel_scale)
+#             psf_image = get_atmos_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
+#                                       atmos_fwhm, atmos_e, atmos_beta,
+#                                       self.fov_pixels, self.pixel_scale)
             
-            # final = galsim.Convolve([psf, gal]) # Make the combined profile
-            # Offset by up to 1/2 pixel in each direction
-            dx = rng() - 0.5
-            dy = rng() - 0.5
+#             # final = galsim.Convolve([psf, gal]) # Make the combined profile
+#             # Offset by up to 1/2 pixel in each direction
+#             dx = rng() - 0.5
+#             dy = rng() - 0.5
             
-            # Concolve with PSF
-            conv = ifftshift(ifft2(fft2(psf_image) * fft2(gal_image))).real
-            conv = torch.max(torch.zeros_like(conv), conv) # set negative pixels to zero
+#             # Concolve with PSF
+#             conv = ifftshift(ifft2(fft2(psf_image) * fft2(gal_image))).real
+#             conv = torch.max(torch.zeros_like(conv), conv) # set negative pixels to zero
 
-            # Add CCD noise (Poisson + Gaussian)
-            obs = torch.poisson(conv) + torch.normal(mean=torch.zeros_like(conv), std=torch.ones_like(conv))
-            obs = torch.max(torch.zeros_like(obs), obs) # set negative pixels to zero
+#             # Add CCD noise (Poisson + Gaussian)
+#             obs = torch.poisson(conv) + torch.normal(mean=torch.zeros_like(conv), std=torch.ones_like(conv))
+#             obs = torch.max(torch.zeros_like(obs), obs) # set negative pixels to zero
             
 
-            # Save images
-            psnr = PSNR(obs, gal_image)
-            psnr_list.append(psnr)
-            io.imsave(os.path.join(self.data_path, 'gt', f"gt_{self.I}_{k}.tiff"), np.array(gal_image), check_contrast=False)
-            io.imsave(os.path.join(self.data_path, 'psf', f"psf_{self.I}_{k}.tiff"), np.array(psf_image), check_contrast=False)
-            io.imsave(os.path.join(self.data_path, 'obs', f"obs_{self.I}_{k}.tiff"), np.array(obs), check_contrast=False)
-            logging.info("Simulating Image:  [{:}/{:}]   PSNR={:.2f}".format(k+1,self.real_galaxy_catalog.nobjects, psnr))
+#             # Save images
+#             psnr = PSNR(obs, gal_image)
+#             psnr_list.append(psnr)
+#             io.imsave(os.path.join(self.data_path, 'gt', f"gt_{self.I}_{k}.tiff"), np.array(gal_image), check_contrast=False)
+#             io.imsave(os.path.join(self.data_path, 'psf', f"psf_{self.I}_{k}.tiff"), np.array(psf_image), check_contrast=False)
+#             io.imsave(os.path.join(self.data_path, 'obs', f"obs_{self.I}_{k}.tiff"), np.array(obs), check_contrast=False)
+#             logging.info("Simulating Image:  [{:}/{:}]   PSNR={:.2f}".format(k+1,self.real_galaxy_catalog.nobjects, psnr))
 
-            # Visualization
-            if idx < 200:
-                plt.figure(figsize=(10,10))
-                plt.subplot(2,2,1)
-                plt.imshow(gal_orig)
-                plt.title('Original Galaxy')
-                plt.subplot(2,2,2)
-                plt.imshow(gal_image)
-                plt.title('Simulated Galaxy\n($e_1={:.3f}$, $e_2={:.3f}$)'.format(gal_g1, gal_g2))
-                plt.subplot(2,2,3)
-                plt.imshow(psf_image)
-                plt.title('PSF\n($e_1={:.3f}$, $e_2={:.3f}$, FWHM={:.2f})'.format(atmos_g1, atmos_g2, atmos_fwhm))
-                plt.subplot(2,2,4)
-                plt.imshow(obs)
-                plt.title('Observed Galaxy\n($PSNR={:.2f}$)'.format(psnr))
-                plt.savefig(os.path.join(self.data_path, 'visualization', f"COSMOS_{self.I}_{k}.jpg"), bbox_inches='tight')
-                plt.close()
+#             # Visualization
+#             if idx < 200:
+#                 plt.figure(figsize=(10,10))
+#                 plt.subplot(2,2,1)
+#                 plt.imshow(gal_orig)
+#                 plt.title('Original Galaxy')
+#                 plt.subplot(2,2,2)
+#                 plt.imshow(gal_image)
+#                 plt.title('Simulated Galaxy\n($e_1={:.3f}$, $e_2={:.3f}$)'.format(gal_g1, gal_g2))
+#                 plt.subplot(2,2,3)
+#                 plt.imshow(psf_image)
+#                 plt.title('PSF\n($e_1={:.3f}$, $e_2={:.3f}$, FWHM={:.2f})'.format(atmos_g1, atmos_g2, atmos_fwhm))
+#                 plt.subplot(2,2,4)
+#                 plt.imshow(obs)
+#                 plt.title('Observed Galaxy\n($PSNR={:.2f}$)'.format(psnr))
+#                 plt.savefig(os.path.join(self.data_path, 'visualization', f"COSMOS_{self.I}_{k}.jpg"), bbox_inches='tight')
+#                 plt.close()
         
-        self.info['PSNR'] = psnr_list
-        with open(self.info_file, 'w') as f:
-            json.dump(self.info, f)
+#         self.info['PSNR'] = psnr_list
+#         with open(self.info_file, 'w') as f:
+#             json.dump(self.info, f)
 
-    def __len__(self):
-        return self.n_train if self.train else self.n_test
+#     def __len__(self):
+#         return self.n_train if self.train else self.n_test
 
-    def __getitem__(self, i):
-        idx = i if self.train else i + self.n_train
+#     def __getitem__(self, i):
+        # idx = i if self.train else i + self.n_train
         
-        psf_path = os.path.join(self.data_path, 'psf')
-        psf = torch.from_numpy(io.imread(os.path.join(psf_path, f"psf_{self.I}_{idx}.tiff"))).unsqueeze(0)
-        # psf = (psf - psf.min())/(psf.max() - psf.min())
-        # psf /= psf.sum()
+        # psf_path = os.path.join(self.data_path, 'psf')
+        # psf = torch.from_numpy(io.imread(os.path.join(psf_path, f"psf_{self.I}_{idx}.tiff"))).unsqueeze(0)
+        # # psf = (psf - psf.min())/(psf.max() - psf.min())
+        # # psf /= psf.sum()
 
-        obs_path = os.path.join(self.data_path, 'obs')
-        obs = torch.from_numpy(io.imread(os.path.join(obs_path, f"obs_{self.I}_{idx}.tiff"))).unsqueeze(0)
-        # obs = (obs - obs.min())/(obs.max() - obs.min())
+        # obs_path = os.path.join(self.data_path, 'obs')
+        # obs = torch.from_numpy(io.imread(os.path.join(obs_path, f"obs_{self.I}_{idx}.tiff"))).unsqueeze(0)
+        # # obs = (obs - obs.min())/(obs.max() - obs.min())
 
-        gt_path = os.path.join(self.data_path, 'gt')
-        gt = torch.from_numpy(io.imread(os.path.join(gt_path, f"gt_{self.I}_{idx}.tiff"))).unsqueeze(0)
-        # gt = (gt - gt.min())/(gt.max() - gt.min())
+        # gt_path = os.path.join(self.data_path, 'gt')
+        # gt = torch.from_numpy(io.imread(os.path.join(gt_path, f"gt_{self.I}_{idx}.tiff"))).unsqueeze(0)
+        # # gt = (gt - gt.min())/(gt.max() - gt.min())
 
-        M = obs.ravel().mean()
-        M = torch.Tensor(M).view(1,1,1)
+        # M = obs.ravel().mean()
+        # M = torch.Tensor(M).view(1,1,1)
 
-        return (obs, psf, M), gt
+        # return (obs, psf, M), gt
 
 def get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
                   atmos_fwhm, atmos_e, atmos_beta,
@@ -326,7 +326,7 @@ def get_COSMOS_Galaxy(catalog, idx, gal_flux, sky_level, gal_e, gal_beta, theta,
     return gal_image, gal_ori_image.array
 
 
-class JWST_Dataset(Dataset):
+class Galaxy_Dataset(Dataset):
     """Simulated Galaxy Image Dataset inherited from torch.utils.data.Dataset."""
     def __init__(self, survey, I, fov_pixels, gal_max_shear, 
                 train, train_split = 0.7, 
@@ -348,7 +348,7 @@ class JWST_Dataset(Dataset):
             data_path (str, optional): Directory to save the dataset. Defaults to '/mnt/WD6TB/tianaoli/dataset/'.
             COSMOS_path (str, optional): Path to the COSMOS data. Defaults to '/mnt/WD6TB/tianaoli/'.
         """
-        
+        super(Galaxy_Dataset, self).__init__()
         logging.info(f'Constructing {survey} Galaxy dataset.')
         
         # Initialize parameters
@@ -570,11 +570,5 @@ if __name__ == "__main__":
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
-    
-    # Dataset = Galaxy_Dataset(survey=opt.survey, I=opt.I, pixel_scale=0.2)
-    # Dataset.create_images()
-    
-    
-    gal_e = 0.5  # shear of galaxy
-    gal_beta = 0.25 * np.pi       # radians
-    shear = galsim.Shear(e=gal_e, beta=gal_beta*galsim.radians)
+    Dataset = Galaxy_Dataset(survey=opt.survey, I=opt.I, pixel_scale=0.2)
+    Dataset.create_images()
