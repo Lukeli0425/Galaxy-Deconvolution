@@ -328,11 +328,10 @@ def get_COSMOS_Galaxy(catalog, idx, gal_flux, sky_level, gal_e, gal_beta, theta,
 
 class Galaxy_Dataset(Dataset):
     """Simulated Galaxy Image Dataset inherited from torch.utils.data.Dataset."""
-    def __init__(self, survey, I, fov_pixels, gal_max_shear, 
-                train, train_split = 0.7, 
-                pixel_scale=0, atmos_max_shear=0, seeing=0,
-                data_path='/mnt/WD6TB/tianaoli/dataset/', 
-                COSMOS_path='/mnt/WD6TB/tianaoli/'):
+    def __init__(self, data_path='/mnt/WD6TB/tianaoli/dataset/', COSMOS_path='/mnt/WD6TB/tianaoli/', 
+                 survey='LSST', I=23.5, fov_pixels=0, gal_max_shear=0.5, 
+                 train=True, train_split=0.7, 
+                 pixel_scale=0, atmos_max_shear=0, seeing=0):
         """Construction function for the PyTorch Galaxy Dataset.
 
         Args:
@@ -361,15 +360,17 @@ class Galaxy_Dataset(Dataset):
         self.sequence = []
         self.info = {}
 
-        self.survey = survey # LSST or JWST
-        self.I = I # I = 23.5 or 25.2 COSMOS data
-        self.fov_pixels = fov_pixels # numbers of pixels in FOV
+        self.survey = survey                # 'LSST' or 'JWST'
+        self.I = I                          # I = 23.5 or 25.2 COSMOS data
+        self.fov_pixels = 48 if self.survey=='LSST' else 64    # numbers of pixels in FOV
         self.gal_max_shear = gal_max_shear
+        self.atmos_max_shear = atmos_max_shear
+        self.seeing = seeing
         
         # Create directory for the dataset
         if not os.path.exists(data_path):
             os.mkdir(data_path)
-        self.data_path = os.path.join(data_path, f'JWST_{self.I}')
+        self.data_path = os.path.join(data_path, f'{self.survey}_{self.I}')
         if not os.path.exists(self.data_path):
             os.mkdir(self.data_path)
         if not os.path.exists(os.path.join(self.data_path, 'obs')): # create directory for obs images
@@ -400,9 +401,9 @@ class Galaxy_Dataset(Dataset):
             self.n_test = self.info['n_test']
             self.sequence = self.info['sequence']
         except:
-            self.info = {'survey':survey, 'I':I, 'fov_pixels':fov_pixels, 'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'pixel_scale':pixel_scale, 'seeing':seeing}
             logging.critical(f'Failed reading information from {self.info_file}.')
-            
+            self.info = {'survey':survey, 'I':I, 'fov_pixels':fov_pixels, 'pixel_scale':pixel_scale, 
+                         'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'seeing':seeing}      
 
     def create_images(self):
         """Generate and save JWST images with Galsim and WebbPSF."""
@@ -535,7 +536,6 @@ class Galaxy_Dataset(Dataset):
         return (obs, psf, M), gt/M
             
             
-
 def get_dataloader(survey='LSST', I=23.5, train_test_split=0.857, batch_size=32):
     """Generate dataloaders from Galaxy Dataset.
 
@@ -549,10 +549,9 @@ def get_dataloader(survey='LSST', I=23.5, train_test_split=0.857, batch_size=32)
         train_loader:  PyTorch data loader for train dataset.
         val_loader: PyTorch data loader for valid dataset.
     """
-    if survey == 'LSST':
-        train_dataset = Galaxy_Dataset(train=True, I=I, data_path='/mnt/WD6TB/tianaoli/dataset/')
-    elif survey == 'JWST':
-        train_dataset = JWST_Dataset(train=True, I=I, fov_pixels=64)
+    train_dataset = Galaxy_Dataset(data_path='/mnt/WD6TB/tianaoli/dataset/', 
+                                   COSMOS_path='/mnt/WD6TB/tianaoli/',
+                                   survey=survey, I=I, train=True)
     
     train_size = int(train_test_split * len(train_dataset))
     val_size = len(train_dataset) - train_size
@@ -570,5 +569,7 @@ if __name__ == "__main__":
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
-    Dataset = Galaxy_Dataset(survey=opt.survey, I=opt.I, pixel_scale=0.2)
+    Dataset = Galaxy_Dataset(data_path='/mnt/WD6TB/tianaoli/dataset/', 
+                             COSMOS_path='/mnt/WD6TB/tianaoli/', 
+                             survey=opt.survey, I=opt.I, pixel_scale=0.2)
     Dataset.create_images()
