@@ -1,4 +1,4 @@
-# Unrolled PSF deconvolution of Galaxy Images for Weak Gravitational Lensing
+# Algorithm Unrolling for PSF Deconvolution of Galaxy Surveys
 
 To clone this project, run:
 ```zsh
