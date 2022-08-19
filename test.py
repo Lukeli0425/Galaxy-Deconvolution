@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+# os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 import logging
 import argparse
 import json
@@ -326,6 +326,6 @@ if __name__ =="__main__":
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
     
-    test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
+    # test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
     test_shear(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
     plot_results(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)

@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '2'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 import logging
 import argparse
 import torch
@@ -14,7 +14,7 @@ def train(n_iters=8, poisson=True, PnP=True,
             n_epochs=10, lr=1e-4, survey='JWST', I=23.5, train_val_split=0.857, batch_size=32, 
             model_save_path='./saved_models/', load_pretrain=False,
             pretrained_file = None):
-    logging.info(f'Start training unrolled {"PnP-" if PnP else ""}ADMM with {"Poisson" if poisson else "Gaussian"} likelihood on {survey}{I} data for {n_epochs} epochs.')
+    logging.info(f'Start training unrolled {"PnP-" if PnP else ""}ADMM ({"Poisson" if poisson else "Gaussian"}, {n_iters}iters) on {survey}{I} data for {n_epochs} epochs.')
     train_loader, val_loader = get_dataloader(survey=survey, I=I, train_test_split=train_val_split, batch_size=batch_size)
     
     if not os.path.exists(model_save_path):
@@ -110,7 +110,7 @@ if __name__ =="__main__":
 
     parser = argparse.ArgumentParser(description='Arguments for training urolled ADMM.')
     parser.add_argument('--n_iters', type=int, default=8)
-    parser.add_argument('--poisson', type=bool, default=True)
+    parser.add_argument('--llh', type=str, default='Poisson', choices=['Poisson', 'Gaussian'])
     parser.add_argument('--PnP', action="store_true")
     parser.add_argument('--n_epochs', type=int, default=50)
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -121,7 +121,7 @@ if __name__ =="__main__":
     parser.add_argument('--load_pretrain', action="store_true")
     opt = parser.parse_args()
 
-    train(  n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP,
+    train(  n_iters=opt.n_iters, poisson=opt.llh, PnP=opt.PnP,
             n_epochs=opt.n_epochs, lr=opt.lr,
             survey=opt.survey, I=opt.I, train_val_split=opt.train_val_split, batch_size=opt.batch_size,
             load_pretrain=opt.load_pretrain,
