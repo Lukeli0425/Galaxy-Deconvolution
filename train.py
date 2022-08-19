@@ -100,7 +100,7 @@ def train(n_iters=8, poisson=True, PnP=True,
             logging.info(f'P4IP model saved to {os.path.join(model_save_path, model_file_name)}')
 
     # Plot loss curve
-    plot_loss(train_loss_list, val_loss_list, poisson, PnP, n_epochs, survey, I)
+    plot_loss(train_loss_list, val_loss_list, poisson, PnP, n_iters, n_epochs, survey, I)
 
     return
 
