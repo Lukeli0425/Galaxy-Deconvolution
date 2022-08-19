@@ -1,5 +1,5 @@
 import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 import logging
 import argparse
 import torch
@@ -95,7 +95,7 @@ def train(n_iters=8, poisson=True, PnP=True,
                         val_loss/len(val_loader)))
 
         if (epoch + 1) % 5 == 0:
-            model_file_name = f'{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{survey}{I}_{epoch+1}epochs.pth'
+            model_file_name = f'{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{epoch+1}epochs.pth'
             torch.save(model.state_dict(), os.path.join(model_save_path, model_file_name))
             logging.info(f'P4IP model saved to {os.path.join(model_save_path, model_file_name)}')
 

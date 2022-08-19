@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from skimage import io
 import torch
 from torch.utils.data import DataLoader
-from dataset import Galaxy_Dataset, JWST_Dataset
+from dataset import Galaxy_Dataset
 from models.Unrolled_ADMM import Unrolled_ADMM
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 from utils import PSNR, estimate_shear
