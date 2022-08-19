@@ -44,7 +44,7 @@ def test(n_iters, poisson, PnP, n_epochs, survey, I):
     """Test the model."""     
     logging.info(f'Start testing unrolled {"PnP-" if PnP else ""}ADMM model with {"Poisson" if poisson else "Gaussian"} likelihood on {survey} data.')
     results = {} # dictionary to record the test results
-    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_epochs}_{I}/'
+    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
     results_file = os.path.join(result_path, 'results.json')
 
     if not os.path.exists(result_path):
@@ -54,17 +54,14 @@ def test(n_iters, poisson, PnP, n_epochs, survey, I):
     if not os.path.exists(os.path.join(result_path, 'visualization')): # create directory for visualization
         os.mkdir(os.path.join(result_path, 'visualization'))
     
-    if survey == 'JWST':
-        test_dataset = JWST_Dataset(train=False, I=I)
-    elif survey == 'LSST':
-        test_dataset = Galaxy_Dataset(train=False, I=I)
+    test_dataset = Galaxy_Dataset(train=False, survey=survey, I=I)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = Unrolled_ADMM(n_iters=n_iters, poisson=poisson, PnP=PnP)
     model.to(device)
     
     # Load the model
-    model_file = f'./saved_models/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{survey}{I}_{n_epochs}epochs.pth'
+    model_file = f'{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs.pth'
     try:
         model.load_state_dict(torch.load(model_file, map_location=torch.device(device)))
     except:
@@ -135,10 +132,7 @@ def test(n_iters, poisson, PnP, n_epochs, survey, I):
 
 def test_shear(n_iters, poisson, PnP, n_epochs, survey, I):
     """Estimate shear with saved model."""
-    if survey == 'JWST':
-        test_dataset = JWST_Dataset(train=False, I=I)
-    elif survey == 'LSST':
-        test_dataset = Galaxy_Dataset(train=False, I=I)
+    test_dataset = Galaxy_Dataset(train=False, survey=survey, I=I)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
     gt_shear = []
@@ -146,7 +140,7 @@ def test_shear(n_iters, poisson, PnP, n_epochs, survey, I):
     rec_shear = []
     fpfs_shear = []
     
-    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_epochs}_{I}/'
+    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
     results_file = os.path.join(result_path, 'results.json')
     if not os.path.exists(result_path):
         os.mkdir(result_path)
@@ -158,7 +152,7 @@ def test_shear(n_iters, poisson, PnP, n_epochs, survey, I):
         logging.warning(f'Failed loading in {results_file}.')
         results = {}
 
-    model_file = f'./saved_models/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{survey}{I}_{n_epochs}epochs.pth'
+    model_file = f'{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs.pth'
     model = ADMM_deconvolver(n_iters=n_iters, poisson=poisson, PnP=PnP, model_file=model_file)
     
     for idx, ((obs, psf, M), gt) in enumerate(test_loader):
@@ -235,7 +229,7 @@ def test_shear(n_iters, poisson, PnP, n_epochs, survey, I):
     return results
 
 def plot_results(n_iters, poisson, PnP, n_epochs, survey, I):
-    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_epochs}_{I}/'
+    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
     results_file = os.path.join(result_path, 'results.json')
     if not os.path.exists(result_path):
         os.mkdir(result_path)
