@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = 's'
 import logging
 import argparse
 import torch
@@ -14,7 +14,7 @@ def train(n_iters=8, poisson=True, PnP=True,
             n_epochs=10, lr=1e-4, survey='JWST', I=23.5, train_val_split=0.857, batch_size=32, 
             model_save_path='./saved_models/', load_pretrain=False,
             pretrained_file = None):
-    logging.info(f'\nStart training unrolled {"PnP-" if PnP else ""}ADMM with {"Poisson" if poisson else "Gaussian"} likelihood on {survey}{I} data for {n_epochs} epochs.')
+    logging.info(f'Start training unrolled {"PnP-" if PnP else ""}ADMM with {"Poisson" if poisson else "Gaussian"} likelihood on {survey}{I} data for {n_epochs} epochs.')
     train_loader, val_loader = get_dataloader(survey=survey, I=I, train_test_split=train_val_split, batch_size=batch_size)
     
     if not os.path.exists(model_save_path):
