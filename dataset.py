@@ -213,23 +213,22 @@ class Galaxy_Dataset(Dataset):
             logging.critical(f'Failed reading information from {self.info_file}.')
             self.info = {'survey':survey, 'I':I, 'fov_pixels':fov_pixels, 'pixel_scale':pixel_scale, 
                          'gal_max_shear':gal_max_shear, 'atmos_max_shear':atmos_max_shear, 'seeing':seeing}      
+            # Generate random sequence for data
+            self.sequence = [i for i in range(self.n_total)]
+            np.random.shuffle(self.sequence)
+            n_train = int(self.train_split * self.n_total)
+            self.info['n_total'] = self.n_total
+            self.info['n_train'] = n_train
+            self.info['n_test'] = self.real_galaxy_catalog.nobjects - n_train
+            self.info['sequence'] = self.sequence
+            with open(self.info_file, 'w') as f:
+                json.dump(self.info, f)
+            logging.info(f'Information saved in {self.info_file}.')
 
-    def create_images(self):
+    def create_images(self, start_k=0):
         """Generate and save JWST images with Galsim and WebbPSF."""
         
         logging.info(f'Simulating {self.survey} images.')
-        
-        # Generate random sequence for data
-        self.sequence = [i for i in range(self.n_total)]
-        np.random.shuffle(self.sequence)
-        n_train = int(self.train_split * self.n_total)
-        self.info['n_total'] = self.n_total
-        self.info['n_train'] = n_train
-        self.info['n_test'] = self.real_galaxy_catalog.nobjects - n_train
-        self.info['sequence'] = self.sequence
-        with open(self.info_file, 'w') as f:
-            json.dump(self.info, f)
-        logging.info(f'Information saved in {self.info_file}.')
         
         random_seed = 243
         psnr_list = []
@@ -241,7 +240,7 @@ class Galaxy_Dataset(Dataset):
             train_psfs = psf_names[:int(len(psf_names) * self.train_split)]
             test_psfs = psf_names[int(len(psf_names) * self.train_split):]
         
-        for k in range(self.n_total):
+        for k in range(start_k, self.n_total):
             idx = self.sequence[k] # index pf galaxy in the catalog
             rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
             
@@ -382,5 +381,5 @@ if __name__ == "__main__":
     Dataset = Galaxy_Dataset(data_path='/mnt/WD6TB/tianaoli/dataset/', 
                              COSMOS_path='/mnt/WD6TB/tianaoli/', 
                              survey=opt.survey, I=opt.I, pixel_scale=0.2)
-    Dataset.create_images()
+    Dataset.create_images(start_k=40000)
     
