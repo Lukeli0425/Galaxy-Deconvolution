@@ -1,7 +1,7 @@
 # Large data
 data/
 dataset/
-# webbpsf-data/
+webbpsf-data/
 
 # Vscode setting
 .vscode/
