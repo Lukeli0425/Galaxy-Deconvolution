@@ -140,14 +140,14 @@ class Z_Update_ResUNet(nn.Module):
 
 
 class Unrolled_ADMM(nn.Module):
-	def __init__(self, n_iters=8, poisson=True, PnP=False):
+	def __init__(self, n_iters=8, llh='Poisson', PnP=False):
 		super(Unrolled_ADMM, self).__init__()
 		self.n =  n_iters
-		self.poisson = poisson
+		self.llh = llh
 		self.pnp = PnP
 		self.init = InitNet(self.n)
 		self.X = X_Update() # FFT based quadratic solution
-		self.V = V_Update_Poisson() if poisson else	V_Update_Gaussian() # Poisson MLE
+		self.V = V_Update_Poisson() if llh=='Poisson' else V_Update_Gaussian() # Poisson/Gaussian MLE
 		self.Z = Z_Update_ResUNet() if PnP else Z_Update() # BW Denoiser
 	
 	def init_l2(self, y, H, alpha):

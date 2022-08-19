@@ -10,18 +10,19 @@ from models.Unrolled_ADMM import Unrolled_ADMM
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 from utils import plot_loss
 
-def train(n_iters=8, poisson=True, PnP=True, 
+def train(n_iters=8, llh='Poisson', PnP=True, 
             n_epochs=10, lr=1e-4, survey='JWST', I=23.5, train_val_split=0.857, batch_size=32, 
             model_save_path='./saved_models/', load_pretrain=False,
             pretrained_file = None):
-    logging.info(f'Start training unrolled {"PnP-" if PnP else ""}ADMM ({"Poisson" if poisson else "Gaussian"}, {n_iters}iters) on {survey}{I} data for {n_epochs} epochs.')
+
+    logging.info(f'Start training unrolled {"PnP-" if PnP else ""}ADMM with {llh} likelihood on {survey}{I} data for {n_epochs} epochs.')
     train_loader, val_loader = get_dataloader(survey=survey, I=I, train_test_split=train_val_split, batch_size=batch_size)
     
     if not os.path.exists(model_save_path):
         os.mkdir(model_save_path)
         
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = Unrolled_ADMM(n_iters=n_iters, poisson=poisson, PnP=PnP)
+    model = Unrolled_ADMM(n_iters=n_iters, llh=llh, PnP=PnP)
     model.to(device)
     if load_pretrain:
         try:
@@ -95,12 +96,12 @@ def train(n_iters=8, poisson=True, PnP=True,
                         val_loss/len(val_loader)))
 
         if (epoch + 1) % 5 == 0:
-            model_file_name = f'{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{epoch+1}epochs.pth'
+            model_file_name = f'{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{epoch+1}epochs.pth'
             torch.save(model.state_dict(), os.path.join(model_save_path, model_file_name))
             logging.info(f'P4IP model saved to {os.path.join(model_save_path, model_file_name)}')
 
     # Plot loss curve
-    plot_loss(train_loss_list, val_loss_list, poisson, PnP, n_iters, n_epochs, survey, I)
+    plot_loss(train_loss_list, val_loss_list, llh, PnP, n_iters, n_epochs, survey, I)
 
     return
 
@@ -121,9 +122,10 @@ if __name__ =="__main__":
     parser.add_argument('--load_pretrain', action="store_true")
     opt = parser.parse_args()
 
-    train(  n_iters=opt.n_iters, poisson=opt.llh, PnP=opt.PnP,
-            n_epochs=opt.n_epochs, lr=opt.lr,
-            survey=opt.survey, I=opt.I, train_val_split=opt.train_val_split, batch_size=opt.batch_size,
-            load_pretrain=opt.load_pretrain,
-            model_save_path='./saved_models/',
-            pretrained_file='./saved_models/Poisson_PnP_20epochs.pth')
+
+    train(n_iters=opt.n_iters, llh=opt.llh, PnP=opt.PnP,
+          n_epochs=opt.n_epochs, lr=opt.lr,
+          survey=opt.survey, I=opt.I, train_val_split=opt.train_val_split, batch_size=opt.batch_size,
+          load_pretrain=opt.load_pretrain,
+          model_save_path='./saved_models/',
+          pretrained_file='./saved_models/Poisson_PnP_20epochs.pth')

@@ -1,5 +1,5 @@
 import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 import logging
 import argparse
 import json
@@ -16,10 +16,10 @@ from scipy.stats import gaussian_kde
 
 class ADMM_deconvolver:
     """Wrapper class for unrolled ADMM deconvolution."""
-    def __init__(self, n_iters=8, poisson=True, PnP=False, model_file=None):
+    def __init__(self, n_iters=8, llh='Poisson', PnP=False, model_file=None):
         self.model_file = model_file
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.model = Unrolled_ADMM(n_iters=n_iters, poisson=poisson, PnP=PnP)
+        self.model = Unrolled_ADMM(n_iters=n_iters, llh=llh, PnP=PnP)
         self.model.to(self.device)
         # Load pretrained model
         try:
@@ -40,11 +40,11 @@ class ADMM_deconvolver:
 
         return rec
 
-def test(n_iters, poisson, PnP, n_epochs, survey, I):
+def test(n_iters, llh, PnP, n_epochs, survey, I):
     """Test the model."""     
-    logging.info(f'Start testing unrolled {"PnP-" if PnP else ""}ADMM model with {"Poisson" if poisson else "Gaussian"} likelihood on {survey} data.')
+    logging.info(f'Start testing unrolled {"PnP-" if PnP else ""}ADMM model with {llh} likelihood on {survey} data.')
     results = {} # dictionary to record the test results
-    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
+    result_path = f'./results/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
     results_file = os.path.join(result_path, 'results.json')
 
     if not os.path.exists(result_path):
@@ -57,11 +57,11 @@ def test(n_iters, poisson, PnP, n_epochs, survey, I):
     test_dataset = Galaxy_Dataset(train=False, survey=survey, I=I)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = Unrolled_ADMM(n_iters=n_iters, poisson=poisson, PnP=PnP)
+    model = Unrolled_ADMM(n_iters=n_iters, llh=llh, PnP=PnP)
     model.to(device)
     
     # Load the model
-    model_file = f'saved_models/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs.pth'
+    model_file = f'saved_models/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs.pth'
     try:
         model.load_state_dict(torch.load(model_file, map_location=torch.device(device)))
     except:
@@ -130,7 +130,7 @@ def test(n_iters, poisson, PnP, n_epochs, survey, I):
 
     return results
 
-def test_shear(n_iters, poisson, PnP, n_epochs, survey, I):
+def test_shear(n_iters, llh, PnP, n_epochs, survey, I):
     """Estimate shear with saved model."""
     test_dataset = Galaxy_Dataset(train=False, survey=survey, I=I)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
@@ -140,7 +140,7 @@ def test_shear(n_iters, poisson, PnP, n_epochs, survey, I):
     rec_shear = []
     fpfs_shear = []
     
-    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
+    result_path = f'./results/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
     results_file = os.path.join(result_path, 'results.json')
     if not os.path.exists(result_path):
         os.mkdir(result_path)
@@ -152,8 +152,8 @@ def test_shear(n_iters, poisson, PnP, n_epochs, survey, I):
         logging.warning(f'Failed loading in {results_file}.')
         results = {}
 
-    model_file = f'saved_models/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs.pth'
-    model = ADMM_deconvolver(n_iters=n_iters, poisson=poisson, PnP=PnP, model_file=model_file)
+    model_file = f'saved_models/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs.pth'
+    model = ADMM_deconvolver(n_iters=n_iters, llh=llh, PnP=PnP, model_file=model_file)
     
     for idx, ((obs, psf, M), gt) in enumerate(test_loader):
         with torch.no_grad():
@@ -228,8 +228,8 @@ def test_shear(n_iters, poisson, PnP, n_epochs, survey, I):
     
     return results
 
-def plot_results(n_iters, poisson, PnP, n_epochs, survey, I):
-    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
+def plot_results(n_iters, llh, PnP, n_epochs, survey, I):
+    result_path = f'./results/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
     results_file = os.path.join(result_path, 'results.json')
     if not os.path.exists(result_path):
         os.mkdir(result_path)
@@ -310,13 +310,12 @@ def plot_results(n_iters, poisson, PnP, n_epochs, survey, I):
 
 
 
-
 if __name__ =="__main__":
     logging.basicConfig(level=logging.INFO)
     
     parser = argparse.ArgumentParser(description='Arguments for tesing unrolled ADMM.')
     parser.add_argument('--n_iters', type=int, default=8)
-    parser.add_argument('--poisson', type=bool, default=True)
+    parser.add_argument('--llh', type=str, default='Poisson', choices=['Poisson', 'Gaussian'])
     parser.add_argument('--PnP', action="store_true")
     parser.add_argument('--n_epochs', type=int, default=8)
     parser.add_argument('--survey', type=str, default='LSST', choices=['LSST', 'JWST'])
@@ -326,6 +325,6 @@ if __name__ =="__main__":
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
     
-    # test(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
-    test_shear(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
-    plot_results(n_iters=opt.n_iters, poisson=opt.poisson, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
+    test(n_iters=opt.n_iters, llh=opt.llh, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
+    test_shear(n_iters=opt.n_iters, llh=opt.llh, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
+    plot_results(n_iters=opt.n_iters, llh=opt.llh, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
