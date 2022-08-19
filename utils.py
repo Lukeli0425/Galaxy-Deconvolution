@@ -57,7 +57,7 @@ def estimate_shear(obs, psf=None, use_psf=False):
     return (g_1, g_2) 
 
 
-def plot_loss(train_loss, val_loss, poisson, PnP, n_epochs, I):
+def plot_loss(train_loss, val_loss, poisson, PnP, n_epochs, survey, I):
     n_epochs = len(train_loss)
     plt.figure(figsize=(12,7))
     plt.plot(range(1, n_epochs+1), train_loss, '-o', markersize=3.5, label='Train Loss')
@@ -66,7 +66,7 @@ def plot_loss(train_loss, val_loss, poisson, PnP, n_epochs, I):
     plt.xlabel('Epoch', fontsize=14)
     plt.ylabel('Loss', fontsize=14)
     plt.legend(fontsize=15)
-    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{I}/'
+    result_path = f'./results/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{survey}{I}/'
     plt.savefig(os.path.join(result_path, 'loss_curve.jpg'))
     plt.close()
 

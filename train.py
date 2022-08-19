@@ -14,7 +14,7 @@ def train(n_iters=8, poisson=True, PnP=True,
             n_epochs=10, lr=1e-4, survey='JWST', I=23.5, train_val_split=0.857, batch_size=32, 
             model_save_path='./saved_models/', load_pretrain=False,
             pretrained_file = None):
-    logging.info(f'\nStart training unrolled {"PnP-" if PnP else ""}ADMM with {"Poisson" if poisson else "Gaussian"} likelihood on {survey} data for {n_epochs} epochs.')
+    logging.info(f'\nStart training unrolled {"PnP-" if PnP else ""}ADMM with {"Poisson" if poisson else "Gaussian"} likelihood on {survey}{I} data for {n_epochs} epochs.')
     train_loader, val_loader = get_dataloader(survey=survey, I=I, train_test_split=train_val_split, batch_size=batch_size)
     
     if not os.path.exists(model_save_path):
@@ -94,13 +94,13 @@ def train(n_iters=8, poisson=True, PnP=True,
                         train_loss/(idx+1),
                         val_loss/len(val_loader)))
 
-        if (epoch + 1) % 2 == 0:
+        if (epoch + 1) % 5 == 0:
             model_file_name = f'{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{survey}{I}_{epoch+1}epochs.pth'
             torch.save(model.state_dict(), os.path.join(model_save_path, model_file_name))
             logging.info(f'P4IP model saved to {os.path.join(model_save_path, model_file_name)}')
 
     # Plot loss curve
-    plot_loss(train_loss_list, val_loss_list, poisson, PnP, n_epochs, I)
+    plot_loss(train_loss_list, val_loss_list, poisson, PnP, n_epochs, survey, I)
 
     return
 
