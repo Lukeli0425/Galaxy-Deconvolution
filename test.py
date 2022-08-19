@@ -61,7 +61,7 @@ def test(n_iters, poisson, PnP, n_epochs, survey, I):
     model.to(device)
     
     # Load the model
-    model_file = f'{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs.pth'
+    model_file = f'saved_models/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs.pth'
     try:
         model.load_state_dict(torch.load(model_file, map_location=torch.device(device)))
     except:
@@ -152,7 +152,7 @@ def test_shear(n_iters, poisson, PnP, n_epochs, survey, I):
         logging.warning(f'Failed loading in {results_file}.')
         results = {}
 
-    model_file = f'{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs.pth'
+    model_file = f'saved_models/{"Poisson" if poisson else "Gaussian"}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs.pth'
     model = ADMM_deconvolver(n_iters=n_iters, poisson=poisson, PnP=PnP, model_file=model_file)
     
     for idx, ((obs, psf, M), gt) in enumerate(test_loader):
@@ -319,7 +319,7 @@ if __name__ =="__main__":
     parser.add_argument('--poisson', type=bool, default=True)
     parser.add_argument('--PnP', action="store_true")
     parser.add_argument('--n_epochs', type=int, default=8)
-    parser.add_argument('--survey', type=str, default='JWST', choices=['LSST', 'JWST'])
+    parser.add_argument('--survey', type=str, default='LSST', choices=['LSST', 'JWST'])
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
