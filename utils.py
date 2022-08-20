@@ -66,8 +66,8 @@ def plot_loss(train_loss, val_loss, llh, PnP, n_iters, n_epochs, survey, I):
     plt.xlabel('Epoch', fontsize=14)
     plt.ylabel('Loss', fontsize=14)
     plt.legend(fontsize=15)
-    result_path = f'./saved_models/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}/'
-    plt.savefig(os.path.join(result_path, 'loss_curve.jpg'))
+    file_name = f'./saved_models/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_loss_curve.jpg'
+    plt.savefig(file_name)
     plt.close()
 
 if __name__ == "__main__":
