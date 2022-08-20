@@ -114,7 +114,7 @@ if __name__ =="__main__":
     parser.add_argument('--llh', type=str, default='Poisson', choices=['Poisson', 'Gaussian'])
     parser.add_argument('--PnP', action="store_true")
     parser.add_argument('--n_epochs', type=int, default=50)
-    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--lr', type=float, default=2e-4)
     parser.add_argument('--survey', type=str, default='JWST', choices=['LSST', 'JWST'])
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     parser.add_argument('--train_val_split', type=float, default=0.857)
