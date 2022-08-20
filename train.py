@@ -100,8 +100,8 @@ def train(n_iters=8, llh='Poisson', PnP=True,
             torch.save(model.state_dict(), os.path.join(model_save_path, model_file_name))
             logging.info(f'P4IP model saved to {os.path.join(model_save_path, model_file_name)}')
 
-    # Plot loss curve
-    plot_loss(train_loss_list, val_loss_list, llh, PnP, n_iters, n_epochs, survey, I)
+        # Plot loss curve
+        plot_loss(train_loss_list, val_loss_list, llh, PnP, n_iters, n_epochs, survey, I)
 
     return
 
