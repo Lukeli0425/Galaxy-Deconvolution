@@ -148,7 +148,7 @@ class Unrolled_ADMM(nn.Module):
 		self.init = InitNet(self.n)
 		self.X = X_Update() # FFT based quadratic solution
 		self.V = V_Update_Poisson() if llh=='Poisson' else V_Update_Gaussian() # Poisson/Gaussian MLE
-		self.Z = Z_Update_ResUNet() if PnP else Z_Update() # BW Denoiser
+		self.Z = Z_Update_ResUNet() if PnP else Z_Update() # Denoiser
 	
 	def init_l2(self, y, H, alpha):
 		# N, C, H, W = y.size()
