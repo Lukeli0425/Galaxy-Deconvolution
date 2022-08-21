@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '2'
 import logging
 import argparse
 import torch
@@ -54,9 +54,8 @@ def train(n_iters=8, llh='Poisson', PnP=True,
             if (idx+1) % 20 == 0:
                 val_loss = 0.0
                 model.eval()
-                optimizer.zero_grad()
-                for _, ((obs, psf, alpha), gt) in enumerate(val_loader):
-                    with torch.no_grad():
+                with torch.no_grad():
+                    for _, ((obs, psf, alpha), gt) in enumerate(val_loader):
                         obs, psf, alpha, gt = obs.to(device), psf.to(device), alpha.to(device), gt.to(device)
                         rec = model(obs, psf, alpha) #* M.view(batch_size,1,1)
                         loss = loss_fn(gt.squeeze(dim=1), rec.squeeze(dim=1))
@@ -70,25 +69,23 @@ def train(n_iters=8, llh='Poisson', PnP=True,
         # Evaluate on train & valid dataset after every epoch
         train_loss = 0.0
         model.eval()
-        optimizer.zero_grad()
-        for _, ((obs, psf, alpha), gt) in enumerate(train_loader):
-            with torch.no_grad():
+        with torch.no_grad():
+            for _, ((obs, psf, alpha), gt) in enumerate(train_loader):
                 obs, psf, alpha, gt = obs.to(device), psf.to(device), alpha.to(device), gt.to(device)
                 rec = model(obs, psf, alpha) #* M.view(batch_size,1,1)
                 loss = loss_fn(gt.squeeze(dim=1), rec.squeeze(dim=1))
                 train_loss += loss.item()
-        train_loss_list.append(train_loss/len(train_loader))
+            train_loss_list.append(train_loss/len(train_loader))
         
         val_loss = 0.0
         model.eval()
-        optimizer.zero_grad()
-        for _, ((obs, psf, alpha), gt) in enumerate(val_loader):
-            with torch.no_grad():
+        with torch.no_grad():
+            for _, ((obs, psf, alpha), gt) in enumerate(val_loader):
                 obs, psf, alpha, gt = obs.to(device), psf.to(device), alpha.to(device), gt.to(device)
                 rec = model(obs, psf, alpha) #* M.view(batch_size,1,1)
                 loss = loss_fn(gt.squeeze(dim=1), rec.squeeze(dim=1))
                 val_loss += loss.item()
-        val_loss_list.append(val_loss/len(val_loader))
+            val_loss_list.append(val_loss/len(val_loader))
 
         logging.info(" [{}: {}/{}]  train_loss={:.4f}  val_loss={:.4f}".format(
                         epoch+1, len(train_loader), len(train_loader),
@@ -114,7 +111,7 @@ if __name__ =="__main__":
     parser.add_argument('--llh', type=str, default='Poisson', choices=['Poisson', 'Gaussian'])
     parser.add_argument('--PnP', action="store_true")
     parser.add_argument('--n_epochs', type=int, default=50)
-    parser.add_argument('--lr', type=float, default=2e-4)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--survey', type=str, default='LSST', choices=['LSST', 'JWST'])
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     parser.add_argument('--train_val_split', type=float, default=0.857)
