@@ -16,7 +16,7 @@ from utils import PSNR
 # webbpsf.setup_logging('ERROR')
 
 def get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
-                  atmos_fwhm, atmos_e, atmos_beta,
+                  atmos_fwhm, atmos_e, atmos_beta, g1_err, g2_err,
                   fov_pixels, pixel_scale):
     """Simulate a PSF from a ground-based observation.
 
@@ -32,6 +32,8 @@ def get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt
         atmos_fwhm (float): The full width at half maximum of the Kolmogorov function for atmospheric PSF.
         atmos_e (float): Ellipticity of the shear to apply to the atmospheric component.
         atmos_beta (float): Position angle (in radians) of the shear to apply to the atmospheric component, twice the phase of a complex valued shear.
+        g1_err (float): The first component of extra shear applied to the overall PSF to simulated a erroneously estimated PSF.
+        g2_err (float): The second component of extra shear applied to the overall PSF to simulated a erroneously estimated PSF.
         fov_pixels (int): Width of the simulated images in pixels.
         pixel_scale (float): Pixel scale of the simulated image determining the resolution.
 
@@ -53,6 +55,9 @@ def get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt
     atmos = galsim.Kolmogorov(fwhm=atmos_fwhm, flux=1) # Note: the flux here is the default flux=1.
     atmos = atmos.shear(e=atmos_e, beta=atmos_beta*galsim.radians)
     psf = galsim.Convolve([atmos, optics], real_space=True)
+    
+    # add extra shear error
+    psf = psf.shear(g1_err, g2_err)
     
     psf_image = galsim.ImageF(fov_pixels, fov_pixels)
     psf.drawImage(psf_image, scale=pixel_scale, method='auto')
@@ -225,8 +230,9 @@ class Galaxy_Dataset(Dataset):
                 json.dump(self.info, f)
             logging.info(f'Information saved in {self.info_file}.')
 
-    def create_images(self, start_k=0):
-        """Generate and save JWST images with Galsim and WebbPSF."""
+    def create_images(self, start_k=0, 
+                      shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3],
+                      seeing_errs=[0.001, 0.01, 0.02, 0.03, 0.05, 0.8, 0.12]):
         
         logging.info(f'Simulating {self.survey} images.')
         
@@ -267,8 +273,32 @@ class Galaxy_Dataset(Dataset):
                 pixel_scale = self.pixel_scale
                 
                 psf_image = get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
-                                         atmos_fwhm, atmos_e, atmos_beta,
-                                         self.fov_pixels, pixel_scale=pixel_scale)   
+                                         atmos_fwhm, atmos_e, atmos_beta, 0, 0,
+                                         self.fov_pixels, pixel_scale=pixel_scale) 
+                
+                # Simulate PSF with shear error
+                for shear_err in shear_errs:
+                    g1_err = shear_err * (rng() - 0.5 > 0)
+                    g2_err = shear_err * (rng() - 0.5 > 0)
+                    psf_noisy = get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
+                                             atmos_fwhm, atmos_e, atmos_beta, g1_err, g2_err,
+                                             self.fov_pixels, pixel_scale=pixel_scale)
+                    # save PSF with error
+                    if not os.path.exists(os.path.join(self.data_path, f'psf_shear_err{shear_err}')):
+                        os.mkdir(os.path.join(self.data_path, f'psf_shear_err{shear_err}'))
+                    torch.save(psf_noisy.clone(), os.path.join(self.data_path, f'psf_shear_err{shear_err}', f"psf_{self.I}_{k}.pth"))
+                    
+                # Simulate PSF with seeing error
+                for seeing_err in seeing_errs:
+                    seeing_rng = galsim.GaussianDeviate(seed=random_seed+k+1, mean=0, sigma=seeing_err)
+
+                    psf_noisy = get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
+                                             atmos_fwhm+seeing_rng(), atmos_e, atmos_beta, g1_err, g2_err, 
+                                             self.fov_pixels, pixel_scale=pixel_scale)
+                    # save PSF with error
+                    if not os.path.exists(os.path.join(self.data_path, f'psf_seeing_err{seeing_err}')):
+                        os.mkdir(os.path.join(self.data_path, f'psf_seeing_err{seeing_err}'))
+                    torch.save(psf_noisy.clone(), os.path.join(self.data_path, f'psf_shear_err{seeing_err}', f"psf_{self.I}_{k}.pth"))
             
             # Galaxy parameters 
             sky_level = 1.e3                    # ADU / arcsec^2
