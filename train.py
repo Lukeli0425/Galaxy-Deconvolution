@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '2'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 import logging
 import argparse
 import torch
@@ -125,4 +125,4 @@ if __name__ =="__main__":
           survey=opt.survey, I=opt.I, train_val_split=opt.train_val_split, batch_size=opt.batch_size,
           load_pretrain=opt.load_pretrain,
           model_save_path='./saved_models/',
-          pretrained_file='./saved_models/p4ip_100epoch.pth')
+          pretrained_file='./saved_models/Poisson_PnP_4iters_LSST23.5_5epochs.pth')
