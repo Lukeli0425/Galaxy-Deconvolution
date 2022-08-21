@@ -232,7 +232,7 @@ class Galaxy_Dataset(Dataset):
 
     def create_images(self, start_k=0, 
                       shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3],
-                      seeing_errs=[0.001, 0.01, 0.02, 0.03, 0.05, 0.8, 0.12]):
+                      seeing_errs=[0.005, 0.01, 0.02, 0.04, 0.06, 0.8, 0.1, 0.12]):
         
         logging.info(f'Simulating {self.survey} images.')
         
@@ -410,10 +410,8 @@ if __name__ == "__main__":
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
-    Dataset = Galaxy_Dataset(data_path='dataset/', 
-                             COSMOS_path='data/', 
-                            #  data_path='/mnt/WD6TB/tianaoli/dataset/', 
-                            #  COSMOS_path='/mnt/WD6TB/tianaoli/',
+    Dataset = Galaxy_Dataset(data_path='/mnt/WD6TB/tianaoli/dataset/', 
+                             COSMOS_path='/mnt/WD6TB/tianaoli/',
                              survey=opt.survey, I=opt.I, pixel_scale=0.2)
     Dataset.create_images()
     
