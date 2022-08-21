@@ -236,7 +236,7 @@ class Galaxy_Dataset(Dataset):
         
         logging.info(f'Simulating {self.survey} images.')
         
-        random_seed = 243
+        random_seed = 2431
         psnr_list = []
         
         # Calculate all Webb PSFs and split for train/test
