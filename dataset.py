@@ -335,14 +335,16 @@ class Galaxy_Dataset(Dataset):
 
         obs_path = os.path.join(self.data_path, 'obs')
         obs = torch.load(os.path.join(obs_path, f"obs_{self.I}_{idx}.pth")).unsqueeze(0)
+        obs = (obs - obs.min())/(obs.max() - obs.min())
 
         gt_path = os.path.join(self.data_path, 'gt')
         gt = torch.load(os.path.join(gt_path, f"gt_{self.I}_{idx}.pth")).unsqueeze(0)
+        gt = (gt - gt.min())/(gt.max() - gt.min())
 
         M = obs.ravel().mean().float()
         M = torch.Tensor(M).view(1,1,1)
 
-        return (obs, psf, M), gt/M
+        return (obs, psf, M), gt
             
             
 def get_dataloader(survey='LSST', I=23.5, train_test_split=0.857, batch_size=32):

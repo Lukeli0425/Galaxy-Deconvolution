@@ -65,7 +65,7 @@ def plot_loss(train_loss, val_loss, llh, PnP, n_iters, n_epochs, survey, I):
     plt.title('Loss Curve', fontsize=18)
     plt.xlabel('Epoch', fontsize=14)
     plt.ylabel('Loss', fontsize=14)
-    plt.yscale("log")
+    # plt.yscale("log")
     plt.legend(fontsize=15)
     file_name = f'./saved_models/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_loss_curve.jpg'
     plt.savefig(file_name)

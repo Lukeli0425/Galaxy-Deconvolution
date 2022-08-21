@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 import logging
 import argparse
 import json
@@ -37,7 +37,7 @@ class ADMM_deconvolver:
 
         output = self.model(obs.to(self.device), psf.to(self.device), alpha.to(self.device))
         rec = (output.cpu() * alpha.cpu()).squeeze(dim=0).squeeze(dim=0).numpy()
-
+        
         return rec
 
 def test(n_iters, llh, PnP, n_epochs, survey, I):
