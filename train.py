@@ -25,11 +25,11 @@ def train(n_iters=8, llh='Poisson', PnP=True,
     model = Unrolled_ADMM(n_iters=n_iters, llh=llh, PnP=PnP)
     model.to(device)
     if load_pretrain:
-        try:
-            model.load_state_dict(torch.load(pretrained_file, map_location=torch.device(device)))
-            logging.info(f'Successfully loaded in {pretrained_file}')
-        except:
-            logging.critical(f'Failed loading in {pretrained_file}')
+        # try:
+        model.load_state_dict(torch.load(pretrained_file, map_location=torch.device(device)))
+        logging.info(f'Successfully loaded in {pretrained_file}')
+        # except:
+        #     logging.critical(f'Failed loading in {pretrained_file}')
 
     optimizer = Adam(params=model.parameters(), lr = lr)
     loss_fn = MultiScaleLoss()
@@ -114,7 +114,7 @@ if __name__ =="__main__":
     parser.add_argument('--llh', type=str, default='Poisson', choices=['Poisson', 'Gaussian'])
     parser.add_argument('--PnP', action="store_true")
     parser.add_argument('--n_epochs', type=int, default=50)
-    parser.add_argument('--lr', type=float, default=4e-4)
+    parser.add_argument('--lr', type=float, default=2e-4)
     parser.add_argument('--survey', type=str, default='LSST', choices=['LSST', 'JWST'])
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     parser.add_argument('--train_val_split', type=float, default=0.857)
@@ -128,4 +128,4 @@ if __name__ =="__main__":
           survey=opt.survey, I=opt.I, train_val_split=opt.train_val_split, batch_size=opt.batch_size,
           load_pretrain=opt.load_pretrain,
           model_save_path='./saved_models/',
-          pretrained_file='./saved_models/Poisson_PnP_20epochs.pth')
+          pretrained_file='./saved_models/p4ip_100epoch.pth')

@@ -90,8 +90,8 @@ class InitNet(nn.Module):
 
 		rho1_iters = output[:,:,0:self.n].view(N, 1, 1, self.n)
 		rho2_iters = output[:,:,self.n:2*self.n].view(N, 1, 1, self.n)
-		lam_iters = output[:,:,2*self.n:3*self.n].view(N, 1, 1, self.n)
-		return rho1_iters, rho2_iters, lam_iters
+		# lam_iters = output[:,:,2*self.n:3*self.n].view(N, 1, 1, self.n)
+		return rho1_iters, rho2_iters#, lam_iters
 
 
 class X_Update(nn.Module):
@@ -116,7 +116,7 @@ class V_Update_Gaussian(nn.Module):
 	def __init__(self):
 		super(V_Update_Gaussian, self).__init__()
 
-	def forward(self, v_tilde, y, rho2, alpha):
+	def forward(self, v_tilde, y, rho2):
 		return (rho2*v_tilde + y)/(1+rho2)
 
 class Z_Update(nn.Module):
@@ -134,7 +134,7 @@ class Z_Update_ResUNet(nn.Module):
 		super(Z_Update_ResUNet, self).__init__()		
 		self.net = ResUNet()
 
-	def forward(self, z, lam, rho1):
+	def forward(self, z):
 		z_out = self.net(z.float())
 		return z_out
 
@@ -144,7 +144,7 @@ class Unrolled_ADMM(nn.Module):
 		super(Unrolled_ADMM, self).__init__()
 		self.n =  n_iters
 		self.llh = llh
-		self.pnp = PnP
+		self.PnP = PnP
 		self.init = InitNet(self.n)
 		self.X = X_Update() # FFT based quadratic solution
 		self.V = V_Update_Poisson() if llh=='Poisson' else V_Update_Gaussian() # Poisson/Gaussian MLE
@@ -168,7 +168,7 @@ class Unrolled_ADMM(nn.Module):
 		k_pad, H = psf_to_otf(kernel, y.size())
 		H =  H.to(device)
 		At, HtH_fft = torch.conj(H), torch.abs(H)**2
-		rho1_iters, rho2_iters, lam_iters = self.init(kernel, alpha) 	# Hyperparameters
+		rho1_iters, rho2_iters = self.init(kernel, alpha) 	# Hyperparameters
 		x = self.init_l2(y, H, alpha)	# Initialization using Wiener Deconvolution
 		x_list.append(x)
 		# Other ADMM variables
@@ -180,10 +180,10 @@ class Unrolled_ADMM(nn.Module):
 		for n in range(self.n):
 			rho1 = rho1_iters[:,:,:,n].view(N,1,1,1)
 			rho2 = rho2_iters[:,:,:,n].view(N,1,1,1)
-			lam = lam_iters[:,:,:,n].view(N,1,1,1)
+			# lam = lam_iters[:,:,:,n].view(N,1,1,1)
 			# V, Z and X updates
-			v = self.V(conv_fft_batch(H,x) + u2, y, rho2, alpha)
-			z = self.Z(x + u1, lam, rho1)
+			v = self.V(conv_fft_batch(H,x) + u2, y, rho2, alpha) if self.llh=='Poisson' else self.V(conv_fft_batch(H,x) + u2, y, rho2)
+			z = self.Z(x + u1) if self.PnP else self.Z(x + u1, lam, rho1)
 			x = self.X(z - u1, conv_fft_batch(At,v - u2), HtH_fft, rho1, rho2)
 			# Lagrangian updates
 			u1 = u1 + x - z			
