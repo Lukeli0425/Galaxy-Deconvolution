@@ -240,7 +240,7 @@ class Galaxy_Dataset(Dataset):
             train_psfs = psf_names[:int(len(psf_names) * self.train_split)]
             test_psfs = psf_names[int(len(psf_names) * self.train_split):]
         
-        for k in range(start_k, self.n_total):
+        for k in range(self.n_test, self.n_total):
             idx = self.sequence[k] # index pf galaxy in the catalog
             rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
             
@@ -378,8 +378,10 @@ if __name__ == "__main__":
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
     
-    Dataset = Galaxy_Dataset(data_path='/mnt/WD6TB/tianaoli/dataset/', 
-                             COSMOS_path='/mnt/WD6TB/tianaoli/', 
+    Dataset = Galaxy_Dataset(data_path='dataset/', 
+                             COSMOS_path='data/', 
+                            #  data_path='/mnt/WD6TB/tianaoli/dataset/', 
+                            #  COSMOS_path='/mnt/WD6TB/tianaoli/',
                              survey=opt.survey, I=opt.I, pixel_scale=0.2)
     Dataset.create_images(start_k=40000)
     
