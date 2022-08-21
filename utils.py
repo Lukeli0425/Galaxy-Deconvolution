@@ -9,7 +9,7 @@ import fpfs
 
 
 
-def PSNR(img1, img2, normalize=False):
+def PSNR(img1, img2, normalize=True):
     """Calculate the PSNR of two images."""
     if not img1.shape == img2.shape:
         logging.raiseExceptions('Images have inconsistent Shapes!')

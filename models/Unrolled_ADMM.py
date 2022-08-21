@@ -73,7 +73,7 @@ class InitNet(nn.Module):
 			nn.ReLU(inplace=True),
 			nn.Linear(64, 64),
 			nn.ReLU(inplace=True),
-			nn.Linear(64, 3*self.n),
+			nn.Linear(64, 2*self.n),
 			nn.Softplus())
 		self.resize = nn.Upsample(size=[256,256], mode='bilinear', align_corners=True)
 		
