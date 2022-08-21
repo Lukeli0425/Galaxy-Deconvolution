@@ -291,7 +291,7 @@ class Galaxy_Dataset(Dataset):
             conv = torch.max(torch.zeros_like(conv), conv) # set negative pixels to zero
 
             # Add CCD noise (Poisson + Gaussian)
-            obs = torch.poisson(conv) + torch.normal(mean=torch.zeros_like(conv), std=torch.ones_like(conv))
+            obs = torch.poisson(conv) + torch.normal(mean=torch.zeros_like(conv), std=5*torch.ones_like(conv))
             obs = torch.max(torch.zeros_like(obs), obs) # set negative pixels to zero
             
             # Save images
