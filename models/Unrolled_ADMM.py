@@ -142,7 +142,7 @@ class Z_Update_ResUNet(nn.Module):
 class Unrolled_ADMM(nn.Module):
 	def __init__(self, n_iters=8, llh='Poisson', PnP=False):
 		super(Unrolled_ADMM, self).__init__()
-		self.n =  n_iters
+		self.n = n_iters
 		self.llh = llh
 		self.PnP = PnP
 		self.init = InitNet(self.n)
