@@ -272,7 +272,7 @@ class Galaxy_Dataset(Dataset):
             
             # Galaxy parameters 
             sky_level = 1.e3                    # ADU / arcsec^2
-            gal_flux = 1.2e4 + 1.e4 * rng()      # arbitrary choice, makes nice (not too) noisy images
+            gal_flux = 0.8e4 + 5.e4 * rng()      # arbitrary choice, makes nice (not too) noisy images
             gal_e = rng() * self.gal_max_shear  # shear of galaxy
             gal_beta = 2. * np.pi * rng()       # radians
             gal_shear = galsim.Shear(e=gal_e, beta=gal_beta*galsim.radians)
