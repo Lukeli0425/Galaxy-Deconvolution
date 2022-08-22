@@ -17,8 +17,8 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
     methods = ['No_deconv', 'Fourier', 'Unrolled_ADMM(4)', 'Unrolled_ADMM(8)', 'Unrolled_ADMM(12)']
     model_files = [None, None,
                    "saved_models/Poisson_PnP_4iters_LSST23.5_30epochs.pth",
-                   "saved_models/Poisson_PnP_8iters_LSST23.5_30epochs.pth",
-                   "saved_models/Poisson_PnP_12iters_LSST23.5_20epochs.pth"]
+                   "saved_models/Poisson_PnP_8iters_LSST23.5_5epochs.pth",
+                   "saved_models/Poisson_PnP_12iters_LSST23.5_15epochs.pth"]
     n_iters = [None, None, 4, 8, 12]
     
     for method, model_file, n_iter in zip(methods, model_files, n_iters):
