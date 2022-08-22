@@ -57,7 +57,7 @@ def get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt
     psf = galsim.Convolve([atmos, optics], real_space=True)
     
     # add extra shear error
-    psf = psf.shear(g1_err, g2_err)
+    psf = psf.shear(g1=g1_err, g2=g2_err)
     
     psf_image = galsim.ImageF(fov_pixels, fov_pixels)
     psf.drawImage(psf_image, scale=pixel_scale, method='auto')
@@ -232,7 +232,7 @@ class Galaxy_Dataset(Dataset):
 
     def create_images(self, start_k=0, 
                       shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3],
-                      seeing_errs=[0.005, 0.01, 0.02, 0.04, 0.06, 0.8, 0.1, 0.12]):
+                      seeing_errs=[0.005, 0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12]):
         
         logging.info(f'Simulating {self.survey} images.')
         
@@ -246,7 +246,7 @@ class Galaxy_Dataset(Dataset):
             train_psfs = psf_names[:int(len(psf_names) * self.train_split)]
             test_psfs = psf_names[int(len(psf_names) * self.train_split):]
         
-        for k in range(self.n_test, self.n_total):
+        for k in range(self.n_train, self.n_total):
             idx = self.sequence[k] # index pf galaxy in the catalog
             rng = galsim.UniformDeviate(seed=random_seed+k+1) # Initialize the random number generator
             
@@ -298,7 +298,7 @@ class Galaxy_Dataset(Dataset):
                     # save PSF with error
                     if not os.path.exists(os.path.join(self.data_path, f'psf_seeing_err{seeing_err}')):
                         os.mkdir(os.path.join(self.data_path, f'psf_seeing_err{seeing_err}'))
-                    torch.save(psf_noisy.clone(), os.path.join(self.data_path, f'psf_shear_err{seeing_err}', f"psf_{self.I}_{k}.pth"))
+                    torch.save(psf_noisy.clone(), os.path.join(self.data_path, f'psf_seeing_err{seeing_err}', f"psf_{self.I}_{k}.pth"))
             
             # Galaxy parameters 
             sky_level = 1.e3                    # ADU / arcsec^2
