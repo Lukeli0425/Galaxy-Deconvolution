@@ -26,7 +26,7 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
         result_path = os.path.join('results/', method)
         if not os.path.exists(result_path):
             os.mkdir(result_path)
-        results_file = os.path.join(result_path, 'results_psf_shear_eer.json')
+        results_file = os.path.join(result_path, 'results_psf_shear_err.json')
         
         results = {} # dictionary to record the test results
         results['shear_errs'] = shear_errs
@@ -100,10 +100,10 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
 def plot_results(methods = ['No_deconv', 'Fourier', 'Unrolled_ADMM(4)', 'Unrolled_ADMM(8)', 'Unrolled_ADMM(12)']):
     """Draw line plot for systematic shear error in PSF vs shear estimation error."""
     color_list = ['tab:pink', 'tab:red', 'tab:purple', 'tab:blue', 'tab:green']
-    fig = plt.figure(figsize=(12,8))
+    fig = plt.figure(figsize=(12,12))
     for method, color in zip(methods, color_list):
         result_path = os.path.join('results', method)
-        results_file = os.path.join(result_path, 'results_psf_shear_eer.json')
+        results_file = os.path.join(result_path, 'results_psf_shear_err.json')
         with open(results_file, 'r') as f:
             results = json.load(f)
         logging.info(f'Successfully loaded in {results_file}.')
