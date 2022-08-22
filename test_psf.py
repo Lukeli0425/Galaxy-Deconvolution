@@ -95,22 +95,24 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
     
     return results
     
-def plot_results(n_iters, llh, PnP, n_epochs, survey, I):
-    # Line plot for systematic shear error in PSF vs shear estimation error
-    result_path = f'./results/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
-    results_file = os.path.join(result_path, 'results_psf_shear_eer.json')
-    with open(results_file, 'r') as f:
-        results = json.load(f)
-    logging.info(f'Successfully loaded in {results_file}.')
-
-    shear_errs = results['shear_errs']
-    rec_err_mean = results['rec_err_mean']
+def plot_results(methods = ['No_deconv', 'Fourier', 'Unrolled_ADMM(4)', 'Unrolled_ADMM(8)', 'Unrolled_ADMM(12)']):
+    """Draw line plot for systematic shear error in PSF vs shear estimation error."""
     plt.figure(figsize=(10,8))
-    plt.plot(shear_errs, rec_err_mean, '-o', label='Unrolled-ADMM(4)')
+    for method in methods:
+        result_path = os.path.join('results', method)
+        results_file = os.path.join(result_path, 'results_psf_shear_eer.json')
+        with open(results_file, 'r') as f:
+            results = json.load(f)
+        logging.info(f'Successfully loaded in {results_file}.')
+
+        shear_errs = results['shear_errs']
+        rec_err_mean = results['rec_err_mean']
+        
+        plt.plot(shear_errs, rec_err_mean, '-o', label=method)
     plt.xlim([0, 0.3])
     plt.ylim([0, 0.2])
     plt.legend()
-    plt.savefig(os.path.join('results/', 'psf_shear_err.jpg'))
+    plt.savefig(os.path.join('results', 'psf_shear_err.jpg'))
     plt.close()
 
 if __name__ == "__main__":
