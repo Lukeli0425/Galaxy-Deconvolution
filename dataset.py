@@ -143,7 +143,7 @@ class Galaxy_Dataset(Dataset):
     """Simulated Galaxy Image Dataset inherited from torch.utils.data.Dataset."""
     def __init__(self, data_path='/mnt/WD6TB/tianaoli/dataset/', COSMOS_path='/mnt/WD6TB/tianaoli/', 
                  survey='LSST', I=23.5, fov_pixels=0, gal_max_shear=0.5, 
-                 train=True, train_split=0.7, 
+                 train=True, train_split=0.7, psf_folder='psf',
                  pixel_scale=0.2, atmos_max_shear=0.25, seeing=0.7):
         """Construction function for the PyTorch Galaxy Dataset.
 
@@ -165,6 +165,7 @@ class Galaxy_Dataset(Dataset):
         
         # Initialize parameters
         self.train= train # Using train data or test data
+        self.psf_folder = psf_folder # Path for PSFs
         self.COSMOS_dir = os.path.join(COSMOS_path, f"COSMOS_{I}_training_sample")
         self.train_split = train_split # n_train/n_total
         self.n_total = 0
@@ -360,7 +361,7 @@ class Galaxy_Dataset(Dataset):
     def __getitem__(self, i):
         idx = i if self.train else i + self.n_train
         
-        psf_path = os.path.join(self.data_path, 'psf')
+        psf_path = os.path.join(self.data_path, self.psf_folder)
         psf = torch.load(os.path.join(psf_path, f"psf_{self.I}_{idx}.pth")).unsqueeze(0)
 
         obs_path = os.path.join(self.data_path, 'obs')
