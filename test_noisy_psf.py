@@ -99,7 +99,7 @@ def test_psf_seeing_err(seeing_errs=[0.005, 0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0
     
 def plot_results(methods = ['No_deconv', 'Fourier', 'Unrolled_ADMM(4)', 'Unrolled_ADMM(8)', 'Unrolled_ADMM(12)']):
     """Draw line plot for systematic shear error in PSF vs shear estimation error."""
-    color_list = ['tab:pink', 'tab:red', 'tab:purple', 'tab:blue', 'tab:green']
+    color_list = ['tab:red', 'tab:olive', 'tab:purple', 'tab:blue', 'tab:green']
     fig = plt.figure(figsize=(12,12))
     for method, color in zip(methods, color_list):
         result_path = os.path.join('results', method)
@@ -116,7 +116,7 @@ def plot_results(methods = ['No_deconv', 'Fourier', 'Unrolled_ADMM(4)', 'Unrolle
     
 
     plt.xlim([0, 0.14])
-    # plt.yscale('log')
+    plt.yscale('log')
     plt.legend()
     plt.savefig(os.path.join('results', 'psf_seeing_err.jpg'), bbox_inches='tight')
     plt.close()
@@ -136,5 +136,5 @@ if __name__ == "__main__":
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
         
-    test_psf_seeing_err()
+    # test_psf_seeing_err()
     plot_results()
