@@ -81,6 +81,8 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
                     gt_shear[idx][0], gt_shear[idx][1],
                     obs_shear[-1][0], obs_shear[-1][1],
                     rec_shear[-1][0], rec_shear[-1][1]))
+                if idx > 5:
+                    break
             results['rec_shear'][str(shear_err)] = rec_shear
             gt_shear, rec_shear = np.array(gt_shear), np.array(rec_shear)
             rec_err_mean.append(np.mean(abs(rec_shear - gt_shear), axis=0))
@@ -130,5 +132,5 @@ if __name__ == "__main__":
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
         
-    test_psf_shear_err(n_iters=opt.n_iters, llh=opt.llh, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
-    plot_results(n_iters=opt.n_iters, llh=opt.llh, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
+    test_psf_shear_err()
+    plot_results()
