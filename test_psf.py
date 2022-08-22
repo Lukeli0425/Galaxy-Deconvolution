@@ -1,11 +1,10 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 import logging
 import argparse
 import json
 import numpy as np
 import matplotlib.pyplot as plt
-from skimage import io
 import torch
 from torch.utils.data import DataLoader
 from dataset import Galaxy_Dataset
@@ -14,82 +13,85 @@ from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 from utils import PSNR, estimate_shear
 from scipy.stats import gaussian_kde
 
-def test_psf_shear_err(n_iters, llh, PnP, n_epochs, survey, I, 
-                       shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
-    logging.info(f'Testing unrolled {"PnP-" if PnP else ""}ADMM model with {llh} likelihood on {survey} data with PSF shear error.')
-    results = {} # dictionary to record the test results
-    results['shear_errs'] = shear_errs
-    results['rec_shear'] = {}
-    results['rec_psnr'] = {}
-    result_path = f'./results/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
-    results_file = os.path.join(result_path, 'results_psf_shear_eer.json')
-
-    if not os.path.exists(result_path):
-        os.mkdir(result_path)
-    if not os.path.exists(os.path.join(result_path, 'visualization')): # create directory for visualization
-        os.mkdir(os.path.join(result_path, 'visualization'))
+def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
+    methods = ['No_deconv', 'Fourier', 'Unrolled_ADMM(4)', 'Unrolled_ADMM(8)', 'Unrolled_ADMM(12)']
+    model_files = [None, None,
+                   "saved_models/Poisson_PnP_4iters_LSST23.5_30epochs.pth",
+                   "saved_models/Poisson_PnP_8iters_LSST23.5_30epochs.pth",
+                   "saved_models/Poisson_PnP_12iters_LSST23.5_20epochs.pth"]
+    n_iters = [None, None, 4, 8, 12]
     
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = Unrolled_ADMM(n_iters=n_iters, llh=llh, PnP=PnP)
-    model.to(device)
-    # Load the model
-    model_file = f'saved_models/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs.pth'
-    try:
-        model.load_state_dict(torch.load(model_file, map_location=torch.device(device)))
-        logging.info(f'Successfully loaded in {model_file}.')
-    except:
-        logging.raiseExceptions('Failed loading pretrained model!')
-    loss_fn = MultiScaleLoss()
-    
-    obs_psnr, gt_shear, obs_shear = [], [], []
-    rec_err_mean = []
-    for k, shear_err in enumerate(shear_errs):
-        test_dataset = Galaxy_Dataset(train=False, survey=survey, I=I, psf_folder=f'psf_shear_err{shear_err}')
-        test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
-    
-        rec_psnr, rec_shear = [], []
-        model.eval()
-        for idx, ((obs, psf, alpha), gt) in enumerate(test_loader):
-            with torch.no_grad():
-                obs, psf, alpha, gt = obs.to(device), psf.to(device), alpha.to(device), gt.to(device)
-                rec = model(obs, psf, alpha) #* M.view(batch_size,1,1)
-                loss = loss_fn(gt.squeeze(dim=1), rec.squeeze(dim=1))
-                rec *= alpha.view(1,1,1)
-                
-                gt = gt.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
-                psf = psf.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
-                obs = obs.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
-                rec = rec.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
-            
-            # Calculate PSNR & shear
-            if k == 0:
-                obs_psnr.append(PSNR(gt, obs))
-                gt_shear.append(estimate_shear(gt))
-                obs_shear.append(estimate_shear(obs))
-            rec_psnr.append(PSNR(gt, rec))
-            rec_shear.append(estimate_shear(rec))
-            
-            logging.info('Estimating shear: [{}/{}]  gt:({:.3f},{:.3f})  obs:({:.3f},{:.3f})  rec:({:.3f},{:.3f})'.format(
-                idx+1, len(test_loader),
-                gt_shear[idx][0], gt_shear[idx][1],
-                obs_shear[-1][0], obs_shear[-1][1],
-                rec_shear[-1][0], rec_shear[-1][1]))
-
+    for method, model_file, n_iter in zip(methods, model_files, n_iters):
+        logging.info(f'Tesing PSF with shear error: {method}')
+        result_path = os.path.join('results/', method)
+        if not os.path.exists(result_path):
+            os.mkdir(result_path)
+        results_file = os.path.join(result_path, 'results_psf_shear_eer.json')
         
-        if k == 0:
-            results['gt_shear'] = gt_shear
-            results['obs_shear'] = obs_shear
-            results['obs_psnr'] = obs_psnr
-        results['rec_shear'][str(shear_err)] = rec_shear
-        results['rec_psnr'][str(shear_err)] = rec_psnr
-        gt_shear, rec_shear = np.array(gt_shear), np.array(rec_shear)
-        rec_err_mean.append(np.mean(abs(rec_shear - gt_shear), axis=0))
-    results['rec_err_mean'] = np.array(rec_err_mean).tolist()
+        results = {} # dictionary to record the test results
+        results['shear_errs'] = shear_errs
+        results['rec_shear'] = {}
+        gt_shear, obs_shear = [], []
+        rec_err_mean = []
+        
+        if not model_file == None:
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            model = Unrolled_ADMM(n_iters=n_iter, llh='Poisson', PnP=True)
+            model.to(device)
+            # Load the model
+            model_file = f'saved_models/{method}.pth'
+            try:
+                model.load_state_dict(torch.load(model_file, map_location=torch.device(device)))
+                logging.info(f'Successfully loaded in {model_file}.')
+            except:
+                logging.raiseExceptions('Failed loading pretrained model!')   
+            model.eval()     
+        
+        for k, shear_err in enumerate(shear_errs):
+            test_dataset = Galaxy_Dataset(train=False, survey='LSST', I=23.5, psf_folder=f'psf_shear_err{shear_err}')
+            test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+        
+            rec_shear = []
+            for idx, ((obs, psf, alpha), gt) in enumerate(test_loader):
+                with torch.no_grad():
+                    if method == 'No_deconv':
+                        if k>0:
+                            rec_shear = obs_shear
+                            break
+                        gt = gt.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+                        obs = obs.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+                        gt_shear.append(estimate_shear(gt))
+                        obs_shear.append(estimate_shear(obs))
+                        rec_shear.append(estimate_shear(obs))
+                    elif method == 'Fourier':
+                        psf = psf.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+                        obs = obs.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+                        rec_shear.append(estimate_shear(obs, psf, use_psf=True))
+                    else:
+                        obs, psf, alpha, gt = obs.to(device), psf.to(device), alpha.to(device), gt.to(device)
+                        rec = model(obs, psf, alpha) #* M.view(batch_size,1,1)
+                        # rec *= alpha.view(1,1,1)
+                        rec = rec.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+                    
+                        # Calculate shear
+                        rec_shear.append(estimate_shear(rec))
+                
+                logging.info('Estimating shear: [{}/{}]  gt:({:.3f},{:.3f})  obs:({:.3f},{:.3f})  rec:({:.3f},{:.3f})'.format(
+                    idx+1, len(test_loader),
+                    gt_shear[idx][0], gt_shear[idx][1],
+                    obs_shear[-1][0], obs_shear[-1][1],
+                    rec_shear[-1][0], rec_shear[-1][1]))
+            results['rec_shear'][str(shear_err)] = rec_shear
+            gt_shear, rec_shear = np.array(gt_shear), np.array(rec_shear)
+            rec_err_mean.append(np.mean(abs(rec_shear - gt_shear), axis=0))
+        results['gt_shear'] = gt_shear.tolist()
+        results['obs_shear'] = obs_shear
+        results['rec_err_mean'] = np.array(rec_err_mean).tolist()
     
-    # Save results to json file
-    with open(results_file, 'w') as f:
-        json.dump(results, f)
-    logging.info(f"Test results saved to {results_file}.")
+        # Save results to json file
+        with open(results_file, 'w') as f:
+            json.dump(results, f)
+        logging.info(f"Test results saved to {results_file}.")
     
     return results
     
