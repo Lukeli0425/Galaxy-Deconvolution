@@ -19,6 +19,8 @@ def test_psf_shear_err(n_iters, llh, PnP, n_epochs, survey, I,
     logging.info(f'Testing unrolled {"PnP-" if PnP else ""}ADMM model with {llh} likelihood on {survey} data with PSF shear error.')
     results = {} # dictionary to record the test results
     results['shear_errs'] = shear_errs
+    results['rec_shear'] = {}
+    results['rec_psnr'] = {}
     result_path = f'./results/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
     results_file = os.path.join(result_path, 'results_psf_shear_eer.json')
 
@@ -39,13 +41,13 @@ def test_psf_shear_err(n_iters, llh, PnP, n_epochs, survey, I,
         logging.raiseExceptions('Failed loading pretrained model!')
     loss_fn = MultiScaleLoss()
     
+    obs_psnr, gt_shear, obs_shear = [], [], []
+    rec_err_mean = []
     for k, shear_err in enumerate(shear_errs):
         test_dataset = Galaxy_Dataset(train=False, survey=survey, I=I, psf_folder=f'psf_shear_err{shear_err}')
         test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
     
-        obs_psnr, rec_psnr = [], []
-        gt_shear, obs_shear, rec_shear = [], [], []
-        rec_err_mean = []
+        rec_psnr, rec_shear = [], []
         model.eval()
         for idx, ((obs, psf, alpha), gt) in enumerate(test_loader):
             with torch.no_grad():
@@ -69,9 +71,10 @@ def test_psf_shear_err(n_iters, llh, PnP, n_epochs, survey, I,
             
             logging.info('Estimating shear: [{}/{}]  gt:({:.3f},{:.3f})  obs:({:.3f},{:.3f})  rec:({:.3f},{:.3f})'.format(
                 idx+1, len(test_loader),
-                gt_shear[-1][0], gt_shear[-1][1],
+                gt_shear[idx][0], gt_shear[idx][1],
                 obs_shear[-1][0], obs_shear[-1][1],
                 rec_shear[-1][0], rec_shear[-1][1]))
+
         
         if k == 0:
             results['gt_shear'] = gt_shear
@@ -81,7 +84,7 @@ def test_psf_shear_err(n_iters, llh, PnP, n_epochs, survey, I,
         results['rec_psnr'][str(shear_err)] = rec_psnr
         gt_shear, rec_shear = np.array(gt_shear), np.array(rec_shear)
         rec_err_mean.append(np.mean(abs(rec_shear - gt_shear), axis=0))
-    results['rec_err_mean'] = rec_err_mean
+    results['rec_err_mean'] = np.array(rec_err_mean).tolist()
     
     # Save results to json file
     with open(results_file, 'w') as f:
@@ -90,30 +93,32 @@ def test_psf_shear_err(n_iters, llh, PnP, n_epochs, survey, I,
     
     return results
     
-def plot_results(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
+def plot_results(n_iters, llh, PnP, n_epochs, survey, I):
     # Line plot for systematic shear error in PSF vs shear estimation error
-    result_path = f'./results/'
+    result_path = f'./results/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
+    results_file = os.path.join(result_path, 'results_psf_shear_eer.json')
     with open(results_file, 'r') as f:
         results = json.load(f)
-    results_file = os.path.join(result_path, 'results_psf_shear_eer.json')
     logging.info(f'Successfully loaded in {results_file}.')
 
     shear_errs = results['shear_errs']
     rec_err_mean = results['rec_err_mean']
     plt.figure(figsize=(10,8))
-    plt.plot(shear_errs, rec_err_mean)
-
+    plt.plot(shear_errs, rec_err_mean, '-o', label='Unrolled-ADMM(4)')
+    plt.ylim([0, 0.3])
+    plt.ylim([0, 0.2])
     plt.legend()
-    plt.savefig(os.pth.join(result_path, 'psf_shear_err.jpg'))
+    plt.savefig(os.path.join('results/', 'psf_shear_err.jpg'))
+    plt.close()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
     parser = argparse.ArgumentParser(description='Arguments for tesing unrolled ADMM.')
-    parser.add_argument('--n_iters', type=int, default=8)
+    parser.add_argument('--n_iters', type=int, default=4)
     parser.add_argument('--llh', type=str, default='Poisson', choices=['Poisson', 'Gaussian'])
     parser.add_argument('--PnP', action="store_true")
-    parser.add_argument('--n_epochs', type=int, default=30)
+    parser.add_argument('--n_epochs', type=int, default=20)
     parser.add_argument('--survey', type=str, default='LSST', choices=['LSST', 'JWST'])
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()
@@ -122,4 +127,4 @@ if __name__ == "__main__":
         os.mkdir('./results/')
         
     test_psf_shear_err(n_iters=opt.n_iters, llh=opt.llh, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
-    plot_results()
+    plot_results(n_iters=opt.n_iters, llh=opt.llh, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
