@@ -18,7 +18,7 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
     model_files = [None, None,
                    "saved_models/Poisson_PnP_4iters_LSST23.5_30epochs.pth",
                    "saved_models/Poisson_PnP_8iters_LSST23.5_5epochs.pth",
-                   "saved_models/Poisson_PnP_12iters_LSST23.5_15epochs.pth"]
+                   "saved_models/Poisson_PnP_12iters_LSST23.5_20epochs.pth"]
     n_iters = [None, None, 4, 8, 12]
     gt_shear, obs_shear = [], []
     for method, model_file, n_iter in zip(methods, model_files, n_iters):
@@ -81,7 +81,7 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
                     gt_shear[idx][0], gt_shear[idx][1],
                     obs_shear[-1][0], obs_shear[-1][1],
                     rec_shear[-1][0], rec_shear[-1][1]))
-                if idx > 100:
+                if idx > 2000:
                     break
             results['rec_shear'][str(shear_err)] = rec_shear
             gt_shear, rec_shear = np.array(gt_shear), np.array(rec_shear)
@@ -99,8 +99,9 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
     
 def plot_results(methods = ['No_deconv', 'Fourier', 'Unrolled_ADMM(4)', 'Unrolled_ADMM(8)', 'Unrolled_ADMM(12)']):
     """Draw line plot for systematic shear error in PSF vs shear estimation error."""
-    plt.figure(figsize=(10,8))
-    for method in methods:
+    color_list = ['tab:pink', 'tab:red', 'tab:purple', 'tab:blue', 'tab:green']
+    fig = plt.figure(figsize=(12,8))
+    for method, color in zip(methods, color_list):
         result_path = os.path.join('results', method)
         results_file = os.path.join(result_path, 'results_psf_shear_eer.json')
         with open(results_file, 'r') as f:
@@ -108,13 +109,16 @@ def plot_results(methods = ['No_deconv', 'Fourier', 'Unrolled_ADMM(4)', 'Unrolle
         logging.info(f'Successfully loaded in {results_file}.')
 
         shear_errs = results['shear_errs']
-        rec_err_mean = results['rec_err_mean']
+        rec_err_mean = np.array(results['rec_err_mean'])
         
-        plt.plot(shear_errs, rec_err_mean, '-o', label=method)
-    plt.xlim([0, 0.5])
-    plt.ylim([0, 0.2])
+        plt.plot(shear_errs, rec_err_mean[:,0], '-o', label=method, color=color)
+        plt.plot(shear_errs, rec_err_mean[:,1], '--v', label=method, color=color)
+    
+
+    plt.xlim([0, 0.32])
+    # plt.yscale('log')
     plt.legend()
-    plt.savefig(os.path.join('results', 'psf_shear_err.jpg'))
+    plt.savefig(os.path.join('results', 'psf_shear_err.jpg'), bbox_inches='tight')
     plt.close()
 
 if __name__ == "__main__":
@@ -133,4 +137,4 @@ if __name__ == "__main__":
         os.mkdir('./results/')
         
     test_psf_shear_err()
-    plot_results()
+    # plot_results()
