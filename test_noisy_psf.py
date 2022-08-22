@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 import logging
 import argparse
 import json
@@ -74,7 +74,8 @@ def test_psf_seeing_err(n_iters, llh, PnP, n_epochs, survey, I,
                 gt_shear[idx][0], gt_shear[idx][1],
                 obs_shear[-1][0], obs_shear[-1][1],
                 rec_shear[-1][0], rec_shear[-1][1]))
-
+            if idx > 500:
+                break
         
         if k == 0:
             results['gt_shear'] = gt_shear
@@ -105,7 +106,7 @@ def plot_results(n_iters, llh, PnP, n_epochs, survey, I):
     rec_err_mean = results['rec_err_mean']
     plt.figure(figsize=(10,8))
     plt.plot(seeing_errs, rec_err_mean, '-o', label='Unrolled-ADMM(4)')
-    plt.ylim([0, 0.3])
+    plt.xlim([0, 0.14])
     plt.ylim([0, 0.2])
     plt.legend()
     plt.savefig(os.path.join('results/', 'psf_seeing_err.jpg'))
@@ -118,7 +119,7 @@ if __name__ == "__main__":
     parser.add_argument('--n_iters', type=int, default=4)
     parser.add_argument('--llh', type=str, default='Poisson', choices=['Poisson', 'Gaussian'])
     parser.add_argument('--PnP', action="store_true")
-    parser.add_argument('--n_epochs', type=int, default=20)
+    parser.add_argument('--n_epochs', type=int, default=30)
     parser.add_argument('--survey', type=str, default='LSST', choices=['LSST', 'JWST'])
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
     opt = parser.parse_args()

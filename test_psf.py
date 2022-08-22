@@ -105,7 +105,7 @@ def plot_results(n_iters, llh, PnP, n_epochs, survey, I):
     rec_err_mean = results['rec_err_mean']
     plt.figure(figsize=(10,8))
     plt.plot(shear_errs, rec_err_mean, '-o', label='Unrolled-ADMM(4)')
-    plt.ylim([0, 0.3])
+    plt.xlim([0, 0.3])
     plt.ylim([0, 0.2])
     plt.legend()
     plt.savefig(os.path.join('results/', 'psf_shear_err.jpg'))
