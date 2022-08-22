@@ -20,7 +20,7 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
                    "saved_models/Poisson_PnP_8iters_LSST23.5_5epochs.pth",
                    "saved_models/Poisson_PnP_12iters_LSST23.5_15epochs.pth"]
     n_iters = [None, None, 4, 8, 12]
-    
+    gt_shear, obs_shear = [], []
     for method, model_file, n_iter in zip(methods, model_files, n_iters):
         logging.info(f'Tesing PSF with shear error: {method}')
         result_path = os.path.join('results/', method)
@@ -31,7 +31,6 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
         results = {} # dictionary to record the test results
         results['shear_errs'] = shear_errs
         results['rec_shear'] = {}
-        gt_shear, obs_shear = [], []
         rec_err_mean = []
         
         if not model_file == None:
@@ -39,7 +38,6 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
             model = Unrolled_ADMM(n_iters=n_iter, llh='Poisson', PnP=True)
             model.to(device)
             # Load the model
-            model_file = f'saved_models/{method}.pth'
             try:
                 model.load_state_dict(torch.load(model_file, map_location=torch.device(device)))
                 logging.info(f'Successfully loaded in {model_file}.')
@@ -66,7 +64,10 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
                     elif method == 'Fourier':
                         psf = psf.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
                         obs = obs.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
-                        rec_shear.append(estimate_shear(obs, psf, use_psf=True))
+                        try:
+                            rec_shear.append(estimate_shear(obs, psf, use_psf=True))
+                        except:
+                            rec_shear.append(obs_shear[idx])
                     else:
                         obs, psf, alpha, gt = obs.to(device), psf.to(device), alpha.to(device), gt.to(device)
                         rec = model(obs, psf, alpha) #* M.view(batch_size,1,1)
@@ -75,13 +76,12 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
                     
                         # Calculate shear
                         rec_shear.append(estimate_shear(rec))
-                
                 logging.info('Estimating shear: [{}/{}]  gt:({:.3f},{:.3f})  obs:({:.3f},{:.3f})  rec:({:.3f},{:.3f})'.format(
                     idx+1, len(test_loader),
                     gt_shear[idx][0], gt_shear[idx][1],
                     obs_shear[-1][0], obs_shear[-1][1],
                     rec_shear[-1][0], rec_shear[-1][1]))
-                if idx > 5:
+                if idx > 100:
                     break
             results['rec_shear'][str(shear_err)] = rec_shear
             gt_shear, rec_shear = np.array(gt_shear), np.array(rec_shear)
@@ -111,7 +111,7 @@ def plot_results(methods = ['No_deconv', 'Fourier', 'Unrolled_ADMM(4)', 'Unrolle
         rec_err_mean = results['rec_err_mean']
         
         plt.plot(shear_errs, rec_err_mean, '-o', label=method)
-    plt.xlim([0, 0.3])
+    plt.xlim([0, 0.5])
     plt.ylim([0, 0.2])
     plt.legend()
     plt.savefig(os.path.join('results', 'psf_shear_err.jpg'))
