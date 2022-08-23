@@ -276,30 +276,30 @@ class Galaxy_Dataset(Dataset):
                 psf_image = get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
                                          atmos_fwhm, atmos_e, atmos_beta, 0, 0,
                                          self.fov_pixels, pixel_scale=pixel_scale) 
-                
-                # Simulate PSF with shear error
-                for shear_err in shear_errs:
-                    g1_err = shear_err * (rng() - 0.5 > 0)
-                    g2_err = shear_err * (rng() - 0.5 > 0)
-                    psf_noisy = get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
-                                             atmos_fwhm, atmos_e, atmos_beta, g1_err, g2_err,
-                                             self.fov_pixels, pixel_scale=pixel_scale)
-                    # save PSF with error
-                    if not os.path.exists(os.path.join(self.data_path, f'psf_shear_err{shear_err}')):
-                        os.mkdir(os.path.join(self.data_path, f'psf_shear_err{shear_err}'))
-                    torch.save(psf_noisy.clone(), os.path.join(self.data_path, f'psf_shear_err{shear_err}', f"psf_{self.I}_{k}.pth"))
-                    
-                # Simulate PSF with seeing error
-                for seeing_err in seeing_errs:
-                    seeing_rng = galsim.GaussianDeviate(seed=random_seed+k+1, mean=0, sigma=seeing_err)
+                if k >= self.n_train:
+                    # Simulate PSF with shear error
+                    for shear_err in shear_errs:
+                        g1_err = shear_err * (rng() - 0.5 > 0)
+                        g2_err = shear_err * (rng() - 0.5 > 0)
+                        psf_noisy = get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
+                                                atmos_fwhm, atmos_e, atmos_beta, g1_err, g2_err,
+                                                self.fov_pixels, pixel_scale=pixel_scale)
+                        # save PSF with error
+                        if not os.path.exists(os.path.join(self.data_path, f'psf_shear_err{shear_err}')):
+                            os.mkdir(os.path.join(self.data_path, f'psf_shear_err{shear_err}'))
+                        torch.save(psf_noisy.clone(), os.path.join(self.data_path, f'psf_shear_err{shear_err}', f"psf_{self.I}_{k}.pth"))
+                        
+                    # Simulate PSF with seeing error
+                    for seeing_err in seeing_errs:
+                        seeing_rng = galsim.GaussianDeviate(seed=random_seed+k+1, mean=0, sigma=seeing_err)
 
-                    psf_noisy = get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
-                                             atmos_fwhm+seeing_rng(), atmos_e, atmos_beta, g1_err, g2_err, 
-                                             self.fov_pixels, pixel_scale=pixel_scale)
-                    # save PSF with error
-                    if not os.path.exists(os.path.join(self.data_path, f'psf_seeing_err{seeing_err}')):
-                        os.mkdir(os.path.join(self.data_path, f'psf_seeing_err{seeing_err}'))
-                    torch.save(psf_noisy.clone(), os.path.join(self.data_path, f'psf_seeing_err{seeing_err}', f"psf_{self.I}_{k}.pth"))
+                        psf_noisy = get_LSST_PSF(lam, tel_diam, opt_defocus, opt_c1, opt_c2, opt_a1, opt_a2, opt_obscuration,
+                                                atmos_fwhm+seeing_rng(), atmos_e, atmos_beta, g1_err, g2_err, 
+                                                self.fov_pixels, pixel_scale=pixel_scale)
+                        # save PSF with error
+                        if not os.path.exists(os.path.join(self.data_path, f'psf_seeing_err{seeing_err}')):
+                            os.mkdir(os.path.join(self.data_path, f'psf_seeing_err{seeing_err}'))
+                        torch.save(psf_noisy.clone(), os.path.join(self.data_path, f'psf_seeing_err{seeing_err}', f"psf_{self.I}_{k}.pth"))
             
             # Galaxy parameters 
             sky_level = 1.e3                    # ADU / arcsec^2
