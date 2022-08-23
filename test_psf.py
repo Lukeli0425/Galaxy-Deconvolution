@@ -100,10 +100,10 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
 def plot_results(methods = ['No_deconv', 'Fourier', 'Unrolled_ADMM(4)', 'Unrolled_ADMM(8)', 'Unrolled_ADMM(12)']):
     """Draw line plot for systematic shear error in PSF vs shear estimation error."""
     color_list = ['tab:red', 'tab:olive', 'tab:purple', 'tab:blue', 'tab:green']
-    fig = plt.figure(figsize=(12,12))
+    fig = plt.figure(figsize=(10,8))
     for method, color in zip(methods, color_list):
         result_path = os.path.join('results', method)
-        results_file = os.path.join(result_path, 'results_psf_shear_eer.json')
+        results_file = os.path.join(result_path, 'results_psf_shear_err.json')
         with open(results_file, 'r') as f:
             results = json.load(f)
         logging.info(f'Successfully loaded in {results_file}.')
@@ -111,13 +111,14 @@ def plot_results(methods = ['No_deconv', 'Fourier', 'Unrolled_ADMM(4)', 'Unrolle
         shear_errs = results['shear_errs']
         rec_err_mean = np.array(results['rec_err_mean'])
         
-        plt.plot(shear_errs, rec_err_mean[:,0], '-o', label=method, color=color)
-        plt.plot(shear_errs, rec_err_mean[:,1], '--v', label=method, color=color)
+        plt.plot(shear_errs, rec_err_mean[:,0], '-o', label='$g_1$, '+method, color=color)
+        plt.plot(shear_errs, rec_err_mean[:,1], '--v', label='$g_2$, '+method, color=color)
     
-
+    plt.xlabel('Shear Error($\Delta_{g_1}$, $\Delta_{g_2}$) in PSF', fontsize=12)
+    plt.ylabel('Average shear estimated error', fontsize=12)
     plt.xlim([0, 0.32])
     plt.yscale('log')
-    plt.legend()
+    plt.legend(fontsize=11)
     plt.savefig(os.path.join('results', 'psf_shear_err.jpg'), bbox_inches='tight')
     plt.close()
 
