@@ -232,8 +232,8 @@ class Galaxy_Dataset(Dataset):
             logging.info(f'Information saved in {self.info_file}.')
 
     def create_images(self, start_k=0, 
-                      shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3],
-                      seeing_errs=[0.005, 0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12]):
+                      shear_errs=[0.01, 0.03, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4],
+                      seeing_errs=[0.005, 0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]):
         
         logging.info(f'Simulating {self.survey} images.')
         
