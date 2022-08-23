@@ -222,10 +222,10 @@ class Galaxy_Dataset(Dataset):
             # Generate random sequence for data
             self.sequence = [i for i in range(self.n_total)]
             np.random.shuffle(self.sequence)
-            n_train = int(self.train_split * self.n_total)
+            self.n_train = int(self.train_split * self.n_total)
             self.info['n_total'] = self.n_total
-            self.info['n_train'] = n_train
-            self.info['n_test'] = self.real_galaxy_catalog.nobjects - n_train
+            self.info['n_train'] = self.n_train
+            self.info['n_test'] = self.real_galaxy_catalog.nobjects - self.n_train
             self.info['sequence'] = self.sequence
             with open(self.info_file, 'w') as f:
                 json.dump(self.info, f)
