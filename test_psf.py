@@ -27,7 +27,6 @@ def test_psf_shear_err(methods, shear_errs, n_iters, model_files):
         rec_err_mean = []
         
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        print(n_iter, model_file)
         if n_iter > 0:
             model = Unrolled_ADMM(n_iters=n_iter, llh='Poisson', PnP=True)
             model.to(device)
@@ -55,7 +54,7 @@ def test_psf_shear_err(methods, shear_errs, n_iters, model_files):
                         gt_shear.append(estimate_shear(gt))
                         obs_shear.append(estimate_shear(obs))
                         rec_shear.append(estimate_shear(obs))
-                    elif method == 'Fourier':
+                    elif method == 'FPFS':
                         psf = psf.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
                         obs = obs.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
                         try:
@@ -73,9 +72,9 @@ def test_psf_shear_err(methods, shear_errs, n_iters, model_files):
                 logging.info('Estimating shear: [{}/{}]  gt:({:.3f},{:.3f})  obs:({:.3f},{:.3f})  rec:({:.3f},{:.3f})'.format(
                     idx+1, len(test_loader),
                     gt_shear[idx][0], gt_shear[idx][1],
-                    obs_shear[-1][0], obs_shear[-1][1],
-                    rec_shear[-1][0], rec_shear[-1][1]))
-                if idx > 10:
+                    obs_shear[idx][0], obs_shear[idx][1],
+                    rec_shear[idx][0], rec_shear[idx][1]))
+                if idx > 1500:
                     break
             results['rec_shear'][str(shear_err)] = rec_shear
             gt_shear, rec_shear = np.array(gt_shear), np.array(rec_shear)
@@ -133,7 +132,7 @@ def test_psf_seeing_err(methods, seeing_errs, n_iters, model_files):
                         gt_shear.append(estimate_shear(gt))
                         obs_shear.append(estimate_shear(obs))
                         rec_shear.append(estimate_shear(obs))
-                    elif method == 'Fourier':
+                    elif method == 'FPFS':
                         psf = psf.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
                         obs = obs.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
                         try:
@@ -151,9 +150,9 @@ def test_psf_seeing_err(methods, seeing_errs, n_iters, model_files):
                 logging.info('Estimating shear: [{}/{}]  gt:({:.3f},{:.3f})  obs:({:.3f},{:.3f})  rec:({:.3f},{:.3f})'.format(
                     idx+1, len(test_loader),
                     gt_shear[idx][0], gt_shear[idx][1],
-                    obs_shear[-1][0], obs_shear[-1][1],
-                    rec_shear[-1][0], rec_shear[-1][1]))
-                if idx > 10:
+                    obs_shear[idx][0], obs_shear[idx][1],
+                    rec_shear[idx][0], rec_shear[idx][1]))
+                if idx > 1500:
                     break
             results['rec_shear'][str(seeing_err)] = rec_shear
             gt_shear, rec_shear = np.array(gt_shear), np.array(rec_shear)
