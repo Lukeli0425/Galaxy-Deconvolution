@@ -27,6 +27,7 @@ def test_psf_shear_err(methods, shear_errs, n_iters, model_files):
         rec_err_mean = []
         
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        print(n_iter, model_file)
         if n_iter > 0:
             model = Unrolled_ADMM(n_iters=n_iter, llh='Poisson', PnP=True)
             model.to(device)
