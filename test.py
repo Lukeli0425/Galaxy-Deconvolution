@@ -107,6 +107,8 @@ def test(n_iters, llh, PnP, n_epochs, survey, I):
             plt.title('Recovered Galaxy\n($PSNR={:.2f}$)'.format(PSNR(gt, rec)))
             plt.savefig(os.path.join(result_path, 'visualization', f"vis_{I}_{idx}.jpg"), bbox_inches='tight')
             plt.close()
+        else:
+            break
         
         obs_psnr.append(PSNR(gt, obs))
         rec_psnr.append(PSNR(gt, rec))
