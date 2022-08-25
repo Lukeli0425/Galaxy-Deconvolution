@@ -27,7 +27,7 @@ def test_psf_shear_err(methods, shear_errs, n_iters, model_files):
         rec_err_mean = []
         
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        if not model_file == None:
+        if n_iter > 0:
             model = Unrolled_ADMM(n_iters=n_iter, llh='Poisson', PnP=True)
             model.to(device)
             # Load the model
@@ -105,7 +105,7 @@ def test_psf_seeing_err(methods, seeing_errs, n_iters, model_files):
         rec_err_mean = []
         
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        if not model_file == None:
+        if n_iter > 0:
             model = Unrolled_ADMM(n_iters=n_iter, llh='Poisson', PnP=True)
             model.to(device)
             # Load the model
@@ -210,7 +210,7 @@ if __name__ == "__main__":
     
     methods = ['No_deconv', 'FPFS', 'Unrolled_ADMM(1)', 'Unrolled_ADMM(2)', 
                'Unrolled_ADMM(4)', 'Unrolled_ADMM(8)', 'Unrolled_ADMM(12)']
-    n_iters = [None, None, 1, 2, 4, 8, 12]
+    n_iters = [0, 0, 1, 2, 4, 8, 12]
     model_files = [None, None,
                    "saved_models/Poisson_PnP_1iters_LSST23.5_50epochs.pth",
                    "saved_models/Poisson_PnP_2iters_LSST23.5_50epochs.pth",
