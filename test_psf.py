@@ -11,15 +11,8 @@ from dataset import Galaxy_Dataset
 from models.Unrolled_ADMM import Unrolled_ADMM
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 from utils import PSNR, estimate_shear
-from scipy.stats import gaussian_kde
 
-def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
-    methods = ['No_deconv', 'Fourier', 'Unrolled_ADMM(4)', 'Unrolled_ADMM(8)', 'Unrolled_ADMM(12)']
-    model_files = [None, None,
-                   "saved_models/Poisson_PnP_4iters_LSST23.5_30epochs.pth",
-                   "saved_models/Poisson_PnP_8iters_LSST23.5_5epochs.pth",
-                   "saved_models/Poisson_PnP_12iters_LSST23.5_20epochs.pth"]
-    n_iters = [None, None, 4, 8, 12]
+def test_psf_shear_err(methods, shear_errs, n_iters, model_files):   
     gt_shear, obs_shear = [], []
     for method, model_file, n_iter in zip(methods, model_files, n_iters):
         logging.info(f'Tesing PSF with shear error: {method}')
@@ -97,7 +90,85 @@ def test_psf_shear_err(shear_errs=[0.01,0.02,0.03,0.05,0.1,0.15,0.2,0.3]):
     
     return results
     
-def plot_results(methods = ['No_deconv', 'Fourier', 'Unrolled_ADMM(4)', 'Unrolled_ADMM(8)', 'Unrolled_ADMM(12)']):
+def test_psf_seeing_err(methods, seeing_errs, n_iters, model_files):
+    gt_shear, obs_shear = [], []
+    for method, model_file, n_iter in zip(methods, model_files, n_iters):
+        logging.info(f'Tesing PSF with shear error: {method}')
+        result_path = os.path.join('results/', method)
+        if not os.path.exists(result_path):
+            os.mkdir(result_path)
+        results_file = os.path.join(result_path, 'results_psf_seeing_err.json')
+        
+        results = {} # dictionary to record the test results
+        results['seeing_errs'] = seeing_errs
+        results['rec_shear'] = {}
+        rec_err_mean = []
+        
+        if not model_file == None:
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            model = Unrolled_ADMM(n_iters=n_iter, llh='Poisson', PnP=True)
+            model.to(device)
+            # Load the model
+            try:
+                model.load_state_dict(torch.load(model_file, map_location=torch.device(device)))
+                logging.info(f'Successfully loaded in {model_file}.')
+            except:
+                logging.raiseExceptions('Failed loading pretrained model!')   
+            model.eval()     
+        
+        for k, seeing_err in enumerate(seeing_errs):
+            test_dataset = Galaxy_Dataset(train=False, survey='LSST', I=23.5, psf_folder=f'psf_seeing_err{seeing_err}')
+            test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+        
+            rec_shear = []
+            for idx, ((obs, psf, alpha), gt) in enumerate(test_loader):
+                with torch.no_grad():
+                    if method == 'No_deconv':
+                        if k>0:
+                            rec_shear = obs_shear
+                            break
+                        gt = gt.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+                        obs = obs.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+                        gt_shear.append(estimate_shear(gt))
+                        obs_shear.append(estimate_shear(obs))
+                        rec_shear.append(estimate_shear(obs))
+                    elif method == 'Fourier':
+                        psf = psf.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+                        obs = obs.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+                        try:
+                            rec_shear.append(estimate_shear(obs, psf, use_psf=True))
+                        except:
+                            rec_shear.append(obs_shear[idx])
+                    else:
+                        obs, psf, alpha, gt = obs.to(device), psf.to(device), alpha.to(device), gt.to(device)
+                        rec = model(obs, psf, alpha) #* M.view(batch_size,1,1)
+                        # rec *= alpha.view(1,1,1)
+                        rec = rec.squeeze(dim=0).squeeze(dim=0).cpu().numpy()
+                    
+                        # Calculate shear
+                        rec_shear.append(estimate_shear(rec))
+                logging.info('Estimating shear: [{}/{}]  gt:({:.3f},{:.3f})  obs:({:.3f},{:.3f})  rec:({:.3f},{:.3f})'.format(
+                    idx+1, len(test_loader),
+                    gt_shear[idx][0], gt_shear[idx][1],
+                    obs_shear[-1][0], obs_shear[-1][1],
+                    rec_shear[-1][0], rec_shear[-1][1]))
+                if idx > 2000:
+                    break
+            results['rec_shear'][str(seeing_err)] = rec_shear
+            gt_shear, rec_shear = np.array(gt_shear), np.array(rec_shear)
+            rec_err_mean.append(np.mean(abs(rec_shear - gt_shear), axis=0))
+        results['gt_shear'] = gt_shear.tolist()
+        results['obs_shear'] = obs_shear
+        results['rec_err_mean'] = np.array(rec_err_mean).tolist()
+    
+        # Save results to json file
+        with open(results_file, 'w') as f:
+            json.dump(results, f)
+        logging.info(f"Test results saved to {results_file}.")
+    
+    return results
+    
+def plot_results(methods):
     """Draw line plot for systematic shear error in PSF vs shear estimation error."""
     color_list = ['tab:red', 'tab:olive', 'tab:purple', 'tab:blue', 'tab:green']
     fig = plt.figure(figsize=(10,8))
@@ -136,6 +207,18 @@ if __name__ == "__main__":
     
     if not os.path.exists('./results/'):
         os.mkdir('./results/')
-        
-    # test_psf_shear_err()
-    plot_results()
+    
+    methods = ['No_deconv', 'FPFS', 'Unrolled_ADMM(1)', 'Unrolled_ADMM(2)', 
+               'Unrolled_ADMM(4)', 'Unrolled_ADMM(8)', 'Unrolled_ADMM(12)']
+    n_iters = [None, None, 1, 2, 4, 8, 12]
+    model_files = [None, None,
+                   "saved_models/Poisson_PnP_1iters_LSST23.5_50epochs.pth",
+                   "saved_models/Poisson_PnP_2iters_LSST23.5_50epochs.pth",
+                   "saved_models/Poisson_PnP_4iters_LSST23.5_30epochs.pth",
+                   "saved_models/Poisson_PnP_8iters_LSST23.5_35epochs.pth",
+                   "saved_models/Poisson_PnP_12iters_LSST23.5_25epochs.pth"]
+    shear_errs=[0.01, 0.03, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4]
+    seeing_errs=[0.005, 0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]
+    test_psf_shear_err(methods=methods, shear_errs=shear_errs, model_files=model_files)
+    test_psf_seeing_err(methods=methods, seeing_errs=seeing_errs, model_files=model_files)
+    # plot_results(methods=methods)
