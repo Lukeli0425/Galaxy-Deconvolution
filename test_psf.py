@@ -26,8 +26,8 @@ def test_psf_shear_err(methods, shear_errs, n_iters, model_files):
         results['rec_shear'] = {}
         rec_err_mean = []
         
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if not model_file == None:
-            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             model = Unrolled_ADMM(n_iters=n_iter, llh='Poisson', PnP=True)
             model.to(device)
             # Load the model
@@ -74,7 +74,7 @@ def test_psf_shear_err(methods, shear_errs, n_iters, model_files):
                     gt_shear[idx][0], gt_shear[idx][1],
                     obs_shear[-1][0], obs_shear[-1][1],
                     rec_shear[-1][0], rec_shear[-1][1]))
-                if idx > 2000:
+                if idx > 10:
                     break
             results['rec_shear'][str(shear_err)] = rec_shear
             gt_shear, rec_shear = np.array(gt_shear), np.array(rec_shear)
@@ -104,8 +104,8 @@ def test_psf_seeing_err(methods, seeing_errs, n_iters, model_files):
         results['rec_shear'] = {}
         rec_err_mean = []
         
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if not model_file == None:
-            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             model = Unrolled_ADMM(n_iters=n_iter, llh='Poisson', PnP=True)
             model.to(device)
             # Load the model
@@ -152,7 +152,7 @@ def test_psf_seeing_err(methods, seeing_errs, n_iters, model_files):
                     gt_shear[idx][0], gt_shear[idx][1],
                     obs_shear[-1][0], obs_shear[-1][1],
                     rec_shear[-1][0], rec_shear[-1][1]))
-                if idx > 2000:
+                if idx > 10:
                     break
             results['rec_shear'][str(seeing_err)] = rec_shear
             gt_shear, rec_shear = np.array(gt_shear), np.array(rec_shear)
