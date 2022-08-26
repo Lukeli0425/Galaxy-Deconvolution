@@ -194,7 +194,7 @@ def plot_results(methods):
     
     plt.xlabel('Shear Error($\Delta_{g_1}$, $\Delta_{g_2}$) in PSF', fontsize=12)
     plt.ylabel('Average shear estimated error', fontsize=12)
-    plt.xlim([0, 0.42])
+    plt.xlim([0, 0.4])
     plt.yscale('log')
     plt.legend(fontsize=10)
     plt.savefig(os.path.join('results', 'psf_shear_err.jpg'), bbox_inches='tight')
@@ -217,7 +217,7 @@ def plot_results(methods):
     
     plt.xlabel('Seeing Error in PSF (arcsec)', fontsize=12)
     plt.ylabel('Average shear estimated error', fontsize=12)
-    plt.xlim([0, 0.32])
+    plt.xlim([0, 0.3])
     plt.yscale('log')
     plt.legend(fontsize=10)
     plt.savefig(os.path.join('results', 'psf_seeing_err.jpg'), bbox_inches='tight')
@@ -249,6 +249,6 @@ if __name__ == "__main__":
                 #    "saved_models/Poisson_PnP_12iters_LSST23.5_25epochs.pth"]
     shear_errs=[0.0, 0.01, 0.03, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4]
     seeing_errs=[0.0, 0.005, 0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]
-    test_psf_shear_err(methods=methods, shear_errs=shear_errs, n_iters=n_iters, model_files=model_files)
-    test_psf_seeing_err(methods=methods, seeing_errs=seeing_errs, n_iters=n_iters, model_files=model_files)
+    test_psf_shear_err(methods=methods, shear_errs=[0], n_iters=n_iters, model_files=model_files)
+    test_psf_seeing_err(methods=methods, seeing_errs=[0], n_iters=n_iters, model_files=model_files)
     plot_results(methods=methods)
