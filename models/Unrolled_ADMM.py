@@ -166,8 +166,8 @@ class Unrolled_ADMM(nn.Module):
 		N, _, _, _ = y.size()
 		# Generate auxiliary variables for convolution
 		k_pad, H = psf_to_otf(kernel, y.size())
-		H =  H.to(device)
-		At, HtH_fft = torch.conj(H), torch.abs(H)**2
+		H = H.to(device)
+		Ht, HtH_fft = torch.conj(H), torch.abs(H)**2
 		rho1_iters, rho2_iters = self.init(kernel, alpha) 	# Hyperparameters
 		x = self.init_l2(y, H, alpha)	# Initialization using Wiener Deconvolution
 		x_list.append(x)
@@ -184,7 +184,7 @@ class Unrolled_ADMM(nn.Module):
 			# V, Z and X updates
 			v = self.V(conv_fft_batch(H,x) + u2, y, rho2, alpha) if self.llh=='Poisson' else self.V(conv_fft_batch(H,x) + u2, y, rho2)
 			z = self.Z(x + u1) if self.PnP else self.Z(x + u1, lam, rho1)
-			x = self.X(z - u1, conv_fft_batch(At,v - u2), HtH_fft, rho1, rho2)
+			x = self.X(z - u1, conv_fft_batch(Ht,v - u2), HtH_fft, rho1, rho2)
 			# Lagrangian updates
 			u1 = u1 + x - z			
 			u2 = u2 + conv_fft_batch(H,x) - v
