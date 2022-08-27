@@ -161,7 +161,7 @@ class Galaxy_Dataset(Dataset):
             COSMOS_path (str, optional): Path to the COSMOS data. Defaults to '/mnt/WD6TB/tianaoli/'.
         """
         super(Galaxy_Dataset, self).__init__()
-        logging.info(f'Constructing {survey} Galaxy dataset.')
+        # logging.info(f'Constructing {survey} Galaxy dataset.')
         
         # Initialize parameters
         self.train= train # Using train data or test data
@@ -201,14 +201,14 @@ class Galaxy_Dataset(Dataset):
         try:
             self.real_galaxy_catalog = galsim.RealGalaxyCatalog(dir=self.COSMOS_dir, sample=str(self.I))
             self.n_total = self.real_galaxy_catalog.nobjects
-            logging.info(f'Successfully read in {self.n_total} real galaxies from {self.COSMOS_dir}.')
+            # logging.info(f'Successfully read in {self.n_total} real galaxies from {self.COSMOS_dir}.')
         except:
             logging.warning(f'Failed reading in real galaxies from {self.COSMOS_dir}.')
 
         # Read in information
         self.info_file = os.path.join(self.data_path, f'{self.survey}_{self.I}_info.json')
         try:
-            logging.info(f'Successfully loaded in {self.info_file}.')
+            # logging.info(f'Successfully loaded in {self.info_file}.')
             with open(self.info_file, 'r') as f:
                 self.info = json.load(f)
             self.n_total = self.info['n_total']
@@ -414,5 +414,5 @@ if __name__ == "__main__":
     Dataset = Galaxy_Dataset(data_path='/mnt/WD6TB/tianaoli/dataset/', 
                              COSMOS_path='/mnt/WD6TB/tianaoli/',
                              survey=opt.survey, I=opt.I, pixel_scale=0.2)
-    Dataset.create_images(start_k=5000)
+    Dataset.create_images(start_k=48400)
     

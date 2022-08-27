@@ -1,5 +1,5 @@
+from cmath import inf
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 import logging
 import argparse
 import json
@@ -12,7 +12,7 @@ from models.Unrolled_ADMM import Unrolled_ADMM
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
 from utils import PSNR, estimate_shear
 
-def test_psf_shear_err(methods, shear_errs, n_iters, model_files):   
+def test_psf_shear_err(methods, shear_errs, n_iters, model_files, n_gal):   
     gt_shear, obs_shear = [], []
     for method, model_file, n_iter in zip(methods, model_files, n_iters):
         logging.info(f'Tesing PSF with shear error: {method}')
@@ -77,7 +77,7 @@ def test_psf_shear_err(methods, shear_errs, n_iters, model_files):
                     gt_shear[idx][0], gt_shear[idx][1],
                     obs_shear[idx][0], obs_shear[idx][1],
                     rec_shear[idx][0], rec_shear[idx][1]))
-                if idx > 1000:
+                if idx > n_gal:
                     break
             results['rec_shear'][str(shear_err)] = rec_shear
             gt_shear, rec_shear = np.array(gt_shear), np.array(rec_shear)
@@ -93,7 +93,7 @@ def test_psf_shear_err(methods, shear_errs, n_iters, model_files):
     
     return results
     
-def test_psf_seeing_err(methods, seeing_errs, n_iters, model_files):
+def test_psf_seeing_err(methods, seeing_errs, n_iters, model_files, n_gal):
     gt_shear, obs_shear = [], []
     for method, model_file, n_iter in zip(methods, model_files, n_iters):
         logging.info(f'Tesing PSF with shear error: {method}')
@@ -158,7 +158,7 @@ def test_psf_seeing_err(methods, seeing_errs, n_iters, model_files):
                     gt_shear[idx][0], gt_shear[idx][1],
                     obs_shear[idx][0], obs_shear[idx][1],
                     rec_shear[idx][0], rec_shear[idx][1]))
-                if idx > 1000:
+                if idx > n_gal:
                     break
             results['rec_shear'][str(seeing_err)] = rec_shear
             gt_shear, rec_shear = np.array(gt_shear), np.array(rec_shear)
@@ -195,6 +195,7 @@ def plot_results(methods):
     plt.xlabel('Shear Error($\Delta_{g_1}$, $\Delta_{g_2}$) in PSF', fontsize=12)
     plt.ylabel('Average shear estimated error', fontsize=12)
     plt.xlim([-0.01, 0.41])
+    # plt.xscale('log')
     plt.yscale('log')
     plt.legend(fontsize=10)
     plt.savefig(os.path.join('results', 'psf_shear_err.jpg'), bbox_inches='tight')
@@ -218,6 +219,7 @@ def plot_results(methods):
     plt.xlabel('Seeing Error in PSF (arcsec)', fontsize=12)
     plt.ylabel('Average shear estimated error', fontsize=12)
     plt.xlim([-0.01, 0.31])
+    # plt.xscale('log')
     plt.yscale('log')
     plt.legend(fontsize=10)
     plt.savefig(os.path.join('results', 'psf_seeing_err.jpg'), bbox_inches='tight')
@@ -233,6 +235,7 @@ if __name__ == "__main__":
     parser.add_argument('--n_epochs', type=int, default=20)
     parser.add_argument('--survey', type=str, default='LSST', choices=['LSST', 'JWST'])
     parser.add_argument('--I', type=float, default=23.5, choices=[23.5, 25.2])
+    parser.add_argument('--n_gal', type=int, default=inf)
     opt = parser.parse_args()
     
     if not os.path.exists('./results/'):
@@ -249,6 +252,6 @@ if __name__ == "__main__":
                 #    "saved_models/Poisson_PnP_12iters_LSST23.5_25epochs.pth"]
     shear_errs=[0.0, 0.01, 0.03, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4]
     seeing_errs=[0.0, 0.005, 0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]
-    # test_psf_shear_err(methods=methods, shear_errs=shear_errs, n_iters=n_iters, model_files=model_files)
-    # test_psf_seeing_err(methods=methods, seeing_errs=seeing_errs, n_iters=n_iters, model_files=model_files)
+    # test_psf_shear_err(methods=methods, shear_errs=shear_errs, n_iters=n_iters, model_files=model_files, n_gal=opt.n_gal)
+    # test_psf_seeing_err(methods=methods, seeing_errs=seeing_errs, n_iters=n_iters, model_files=model_files, n_gal=opt.n_gal)
     plot_results(methods=methods)
