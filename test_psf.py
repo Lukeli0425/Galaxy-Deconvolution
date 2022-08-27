@@ -38,6 +38,7 @@ def test_psf_shear_err(methods, shear_errs, n_iters, model_files, n_gal):
                 model.to(device)
             else:
                 model = Unrolled_ADMM(n_iters=n_iter, llh='Poisson', PnP=True)
+                model.to(device)
                 try: # Load the model
                     model.load_state_dict(torch.load(model_file, map_location=torch.device(device)))
                     logging.info(f'Successfully loaded in {model_file}.')
@@ -126,6 +127,7 @@ def test_psf_seeing_err(methods, seeing_errs, n_iters, model_files, n_gal):
                 model.to(device)
             else:
                 model = Unrolled_ADMM(n_iters=n_iter, llh='Poisson', PnP=True)
+                model.to(device)
                 try: # Load the model
                     model.load_state_dict(torch.load(model_file, map_location=torch.device(device)))
                     logging.info(f'Successfully loaded in {model_file}.')
