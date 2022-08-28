@@ -11,8 +11,8 @@ from torch.utils.data import DataLoader
 from dataset import Galaxy_Dataset
 from models.Unrolled_ADMM import Unrolled_ADMM
 from utils_poisson_deblurring.utils_torch import MultiScaleLoss
-from utils import PSNR, estimate_shear
-from scipy.stats import gaussian_kde
+from utils import PSNR, estimate_shear, plot_psnr, plot_shear_err
+
 
 class ADMM_deconvolver:
     """Wrapper class for unrolled ADMM deconvolution."""
@@ -231,86 +231,6 @@ def test_shear(n_iters, llh, PnP, n_epochs, survey, I):
     
     return results
 
-def plot_results(n_iters, llh, PnP, n_epochs, survey, I):
-    result_path = f'./results/{llh}{"_PnP" if PnP else ""}_{n_iters}iters_{survey}{I}_{n_epochs}epochs/'
-    results_file = os.path.join(result_path, 'results.json')
-    if not os.path.exists(result_path):
-        os.mkdir(result_path)
-    try:
-        with open(results_file, 'r') as f:
-            results = json.load(f)
-        logging.info(f'Successfully loaded in {results_file}.')
-    except:
-        logging.raiseExceptions(f'Failed loading in {results_file}.')
-
-    # Plot PSNR distribution
-    try:
-        obs_psnr, rec_psnr = np.array(results['obs_psnr']), np.array(results['rec_psnr'])
-        plt.figure(figsize=(12,10))
-        plt.plot([10,35],[10,35],'r') # plot y=x line
-        xy = np.vstack([obs_psnr, rec_psnr])
-        z = gaussian_kde(xy)(xy)
-        idx = z.argsort()
-        x, y, z = obs_psnr[idx], rec_psnr[idx], z[idx]
-        plt.scatter(x, y, c=z, s=8, cmap='Spectral_r')
-        plt.colorbar()
-        plt.title('PSNR of Test Results', fontsize=18)
-        plt.xlabel('PSNR of Observed Galaxies', fontsize=15)
-        plt.ylabel('PSNR of Recovered Galaxies', fontsize=15)
-        plt.savefig(os.path.join(result_path, 'psnr.jpg'), bbox_inches='tight')
-        plt.close()
-    except:
-        logging.warning('No PSNR data found!')
-
-    # Plot shear error density distribution
-    gt_shear = np.array(results['gt_shear'])
-    obs_shear = np.array(results['obs_shear'])
-    rec_shear = np.array(results['rec_shear'])
-    fpfs_shear = np.array(results['fpfs_shear'])
-    plt.figure(figsize=(15,4.2))
-    plt.subplot(1,3,1)
-    x = (obs_shear - gt_shear)[:,0]
-    y = (obs_shear - gt_shear)[:,1]
-    xy = np.vstack([x,y])
-    z = gaussian_kde(xy)(xy)
-    idx = z.argsort()
-    x, y, z = x[idx], y[idx], z[idx]
-    plt.scatter(x, y, c=z, s=5, cmap='Spectral_r')
-    plt.xlabel('$e_1$', fontsize=13)
-    plt.ylabel('$e_2$', fontsize=13)
-    plt.xlim([-0.8,0.8])
-    plt.ylim([-0.8,0.8])
-    plt.title('Observed Galaxy', fontsize=13)
-
-    plt.subplot(1,3,2)
-    x = (rec_shear - gt_shear)[:,0]
-    y = (rec_shear - gt_shear)[:,1]
-    xy = np.vstack([x,y])
-    z = gaussian_kde(xy)(xy)
-    idx = z.argsort()
-    x, y, z = x[idx], y[idx], z[idx]
-    plt.scatter(x, y, c=z, s=5, cmap='Spectral_r')
-    plt.xlabel('$e_1$', fontsize=13)
-    plt.ylabel('$e_2$', fontsize=13)
-    plt.xlim([-0.8,0.8])
-    plt.ylim([-0.8,0.8])
-    plt.title('Recovered Galaxy', fontsize=13)
-
-    plt.subplot(1,3,3)
-    x = (fpfs_shear - gt_shear)[:,0]
-    y = (fpfs_shear - gt_shear)[:,1]
-    xy = np.vstack([x,y])
-    z = gaussian_kde(xy)(xy)
-    idx = z.argsort()
-    x, y, z = x[idx], y[idx], z[idx]
-    plt.scatter(x, y, c=z, s=5, cmap='Spectral_r')
-    plt.xlabel('$e_1$', fontsize=13)
-    plt.ylabel('$e_2$', fontsize=13)
-    plt.xlim([-0.8,0.8])
-    plt.ylim([-0.8,0.8])
-    plt.title('Fourier Power Spectrum Deconvolution', fontsize=13)
-    plt.savefig(os.path.join(result_path, 'shear_err.jpg'), bbox_inches='tight')
-
 
 
 if __name__ =="__main__":
@@ -330,5 +250,5 @@ if __name__ =="__main__":
     
     test(n_iters=opt.n_iters, llh=opt.llh, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
     test_shear(n_iters=opt.n_iters, llh=opt.llh, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
-    plot_results(n_iters=opt.n_iters, llh=opt.llh, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
-
+    plot_psnr(n_iters=opt.n_iters, llh=opt.llh, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)
+    plot_shear_err(n_iters=opt.n_iters, llh=opt.llh, PnP=opt.PnP, n_epochs=opt.n_epochs, survey=opt.survey, I=opt.I)

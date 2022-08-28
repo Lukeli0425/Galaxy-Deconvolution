@@ -2,6 +2,8 @@
 data/
 dataset/
 webbpsf-data/
+results_temp/
+saved_models_temp/
 
 # Vscode setting
 .vscode/
